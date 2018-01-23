@@ -10,7 +10,7 @@ def createTimeStamp(datestr, format="%Y-%m-%d %H:%M:%S"):
     return time.mktime(time.strptime(datestr, format))
 
 
-class poloniex:
+class Poloniex:
     def __init__(self, APIKey, Secret):
         self.APIKey = APIKey
         self.Secret = Secret
@@ -84,7 +84,7 @@ class poloniex:
         return self.api_query("returnChartData",
                               {'currencyPair': currencyPair, 'start': start, 'end': end, 'period': period})
 
-    def returnCurrencies(self):
+    def returnCurrencies(self) -> dict:
         return self.api_query("returnCurrencies")
 
     # Returns all of your balances.
@@ -148,7 +148,7 @@ class poloniex:
 
 
 def main():
-    p = poloniex("APIKey", "Secret".encode())
+    p = Poloniex("APIKey", "Secret".encode())
     r = p.returnCurrencies()
     print(r)
 

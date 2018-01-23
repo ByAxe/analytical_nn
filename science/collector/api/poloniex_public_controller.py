@@ -1,6 +1,8 @@
-import json
+import postgresql
+from flask import Flask, g
 
-from flask import Flask, make_response
+from science.collector.api.utils import json_response
+from science.collector.poloniex import Poloniex
 
 app = Flask(__name__)
 
@@ -11,18 +13,31 @@ books = [{
 }]
 
 
+@app.before_request
+def before_request():
+    g.db = postgresql.open(app.config['DATABASE_NAME'])
+
+
 @app.route('/currencies', methods=['PUT'])
 def update_currencies():
-    print("Currencies updated!")
-    pass
+    poloniex = Poloniex("APIKey", "Secret".encode())
 
+    r = poloniex.returnCurrencies()
 
-@app.route('/book')
-def book_list():
-    content = json.dumps(books)
+    ins = g.db.prepare(
+        "INSERT INTO poloniex.currencies "
+        "(id, symbol, name, min_conf, deposit_address, disabled, delisted, frozen) "
+        "VALUES ($1, $2, $3, $4, $5, $6, $7, $8)")
 
-    response = make_response(
-        content, 200, {'Content-Type': 'application/json'})
-    # Check utils.json_response ;)
+    for symbol, info in r.items():
+        identifier: int = info['id']
+        name: str = info['name']
+        min_conf: int = info['minConf']
+        deposit_address = info['depositAddress']
+        disabled: int = info['disabled']
+        delisted: int = info['delisted']
+        frozen: int = info['frozen']
 
-    return response
+        ins(identifier, symbol, name, min_conf, deposit_address, disabled, delisted, frozen)
+
+    return json_response(status=200)

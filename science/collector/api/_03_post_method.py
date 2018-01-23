@@ -1,5 +1,4 @@
 import json
-import sqlite3
 
 from flask import Flask, request, g
 
@@ -8,9 +7,9 @@ from .utils import json_response, JSON_MIME_TYPE
 app = Flask(__name__)
 
 
-@app.before_request
-def before_request():
-    g.db = sqlite3.connect(app.config['DATABASE_NAME'])
+# @app.before_request
+# def before_request():
+#     g.db = postgresql.open(app.config['DATABASE_NAME'])
 
 
 @app.route('/book')
