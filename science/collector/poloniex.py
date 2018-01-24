@@ -40,9 +40,17 @@ class Poloniex:
                 'https://poloniex.com/public?command=' + command + '&currencyPair=' + str(req['currencyPair']))
             return json.loads(ret.read())
         elif command == "returnMarketTradeHistory":
-            ret = urlopen(
-                'https://poloniex.com/public?command=' + "returnTradeHistory" + '&currencyPair=' + str(
-                    req['currencyPair']))
+            if all([req['start'], req['end']]):
+                ret = urlopen(
+                    'https://poloniex.com/public?command=' + "returnTradeHistory"
+                    + '&currencyPair=' + str(req['currencyPair'])
+                    + '&start=' + str(req['start'])
+                    + '&end=' + str(req['end'])
+                )
+            else:
+                ret = urlopen(
+                    'https://poloniex.com/public?command=' + "returnTradeHistory" + '&currencyPair=' + str(
+                        req['currencyPair']))
             return json.loads(ret.read())
         elif command == "returnChartData":
             ret = urlopen(
@@ -77,8 +85,9 @@ class Poloniex:
     def returnOrderBook(self, currencyPair):
         return self.api_query("returnOrderBook", {'currencyPair': currencyPair})
 
-    def returnMarketTradeHistory(self, currencyPair):
-        return self.api_query("returnMarketTradeHistory", {'currencyPair': currencyPair})
+    def returnMarketTradeHistory(self, currencyPair: str, start: int = None, end: int = None) -> list:
+        return self.api_query("returnMarketTradeHistory",
+                              {"currencyPair": currencyPair, 'start': start, 'end': end})
 
     def returnChartData(self, currencyPair: str, start: int, end: int, period: int) -> object:
         return self.api_query("returnChartData",
