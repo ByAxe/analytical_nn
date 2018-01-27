@@ -1,7 +1,9 @@
-import psycopg2
-from flask import Flask, g, request
 # from flask_restful import Resource, Api
 import json
+
+import psycopg2
+from flask import Flask, g, request
+
 from science.collector.api.utils import json_response
 from science.collector.poloniex import Poloniex
 
@@ -11,6 +13,10 @@ poloniex = Poloniex("APIKey", "Secret".encode())
 
 @app.before_request
 def before_request():
+    """
+    Initializes everything before the first request
+    Works similar to post-construct phase in Java
+    """
     g.db = psycopg2.connect(app.config['DATABASE_NAME'])
     g.cur = g.db.cursor()
 
@@ -27,6 +33,7 @@ def update_currencies():
     # clear the table
     g.cur.execute("DELETE FROM poloniex.currencies")
 
+    # prepares the query for insert
     g.cur.execute("PREPARE currencies_insert_plan AS " +
                   "INSERT INTO poloniex.currencies "
                   "(id, symbol, name, min_conf, deposit_address, disabled, delisted, frozen) "
@@ -34,16 +41,11 @@ def update_currencies():
 
     sql = "EXECUTE currencies_insert_plan (%s, %s, %s, %s, %s, %s, %s, %s)"
 
+    # actual insert into DB
     for symbol, info in r.items():
-        identifier: int = info['id']
-        name: str = info['name']
-        min_conf: int = info['minConf']
-        deposit_address = info['depositAddress']
-        disabled: int = info['disabled']
-        delisted: int = info['delisted']
-        frozen: int = info['frozen']
-
-        g.cur.execute(sql, (identifier, symbol, name, min_conf, deposit_address, disabled, delisted, frozen))
+        g.cur.execute(sql, (info['id'], symbol, info['name'],
+                            info['minConf'], info['depositAddress'], info['disabled'],
+                            info['delisted'], info['frozen']))
 
     return json_response(str(r))
 
@@ -79,6 +81,11 @@ def loadMarketTradeHistory():
 
 @app.route('/public/ticker')
 def actualizePairs():
+    if ('currencyPair' and 'start' and 'end' and 'period') not in request.args:
+        error = json.dumps({'error': 'Missing field/s (currencyPair, start, end, period)'})
+        return json_response(error, 400)
+
+
     pass
 
 
