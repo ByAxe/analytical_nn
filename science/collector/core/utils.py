@@ -15,6 +15,8 @@ PREPARE chart_data_insert_plan AS
     (main_currency, secondary_currency, period, date, high, low, open, close, volume, quote_volume, weighted_average)
     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)"""
 
+PERIODS = [300, 900, 1800, 7200, 14400, 86400]
+
 
 def search_book(books, book_id):
     for book in books:

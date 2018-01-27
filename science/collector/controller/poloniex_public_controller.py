@@ -64,13 +64,18 @@ def loadMarketTradeHistory():
 
 @app.route('/public/chartdata/<string:main_currency>/<string:secondary_currency>')
 def loadChartData(main_currency, secondary_currency):
-    if ('start' and 'end' and 'period') not in request.args:
-        error = json.dumps({'error': 'Missing field/s (currencyPair, start, end, period)'})
+    if ('start' and 'end') not in request.args:
+        error = json.dumps({'error': 'Missing field/s (start, end)'})
         return json_response(error, 400)
 
-    r = poloniexPublicService.actualizePairs(main_currency, secondary_currency,
-                                             int(request.args['start']), int(request.args['end']),
-                                             int(request.args['period']))
+    period = None
+
+    if 'period' in request.args:
+        period = int(request.args['period'])
+
+    r = poloniexPublicService.loadChartData(main_currency, secondary_currency,
+                                            int(request.args['start']), int(request.args['end']),
+                                            period)
 
     return json_response(str(r))
 
