@@ -1,7 +1,7 @@
 from flask import g
 
 from science.collector.core.utils import CHART_DATA_INSERT_PLAN_SQL, \
-    CURRENCIES_INSERT_PLAN_SQL, PERIODS, MAX_DATA_IN_SINGLE_QUERY
+    CURRENCIES_INSERT_PLAN_SQL, PERIODS, MAX_DATA_IN_SINGLE_QUERY, ALL
 from science.collector.service.poloniex_api import Poloniex
 
 poloniexApi = Poloniex("APIKey", "Secret".encode())
@@ -32,6 +32,13 @@ class PoloniexPublicService:
     def returnMarketTradeHistory(self, currencyPair: str, start: int, end: int) -> object:
         return poloniexApi.returnMarketTradeHistory(currencyPair, start, end)
 
+    def returnAllPairs(self):
+        """
+        Because keys in ticker is a currently available pairs of currencies
+        :return: list of pairs
+        """
+        return poloniexApi.returnTicker().keys()
+
     def loadChartData(self, mainCurrency, secondaryCurrency, start, end, period) -> int:
         # to have actual list of currencies
         self.updateCurrencies()
@@ -52,7 +59,37 @@ class PoloniexPublicService:
             # TODO implement!!
             pass
 
-        return len(self._loadChartDataAndSaveToDb(mainCurrency, secondaryCurrency, start, end, period))
+        return self.loadChartDataAndSpecifyTheCurrencyPair(mainCurrency, secondaryCurrency, start, end, period)
+
+    def loadChartDataAndSpecifyTheCurrencyPair(self, mainCurrency, secondaryCurrency, start, end, period) -> int:
+        def loadForBunchOfPairs(bunchPairs: list) -> int:
+            """
+            If there was specified ALL instead of concrete currency -> load every pair from other side
+            :param bunchPairs: main and secondary list of pairs those were not specified
+            :return: resulting amount of updated elements
+            """
+            amount = 0
+            for pairs in bunchPairs:
+                for pair in pairs or []:
+                    m, s = pair.split("_")
+                    amount = amount + len(self._loadChartDataAndSaveToDb(m, s, start, end, period))
+
+            return amount
+
+        mainPairs, secondaryPairs = None, None
+
+        # If one, or both mentioned currencies == ALL -> load all actual pairs into list/s
+        if mainCurrency == ALL:
+            mainPairs = [p for p in self.returnAllPairs() if p.startswith(mainCurrency)]
+        if secondaryCurrency == ALL:
+            secondaryPairs = [p for p in self.returnAllPairs() if p.endswith(secondaryCurrency)]
+
+        # if there were no ALL in pairs -> load everything just for specified currency pair
+        if (mainPairs and secondaryPairs) is None:
+            return len(self._loadChartDataAndSaveToDb(mainCurrency, secondaryCurrency, start, end, period))
+
+        # if there was specified ALL instead of concrete currency -> load every pair from other side
+        return loadForBunchOfPairs([mainPairs, secondaryPairs])
 
     def _loadChartDataAndSaveToDb(self, mainCurrency, secondaryCurrency, start, end, period) -> list:
         # prepares the query for insert

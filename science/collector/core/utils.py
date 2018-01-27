@@ -16,6 +16,7 @@ PREPARE chart_data_insert_plan AS
     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)"""
 
 PERIODS = [300, 900, 1800, 7200, 14400, 86400]
+ALL = 'all'
 
 
 def search_book(books, book_id):

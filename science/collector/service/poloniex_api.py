@@ -76,7 +76,7 @@ class Poloniex:
             jsonRet = json.loads(ret.read())
             return self.post_process(jsonRet)
 
-    def returnTicker(self):
+    def returnTicker(self) -> dict:
         return self.api_query("returnTicker")
 
     def return24Volume(self):
