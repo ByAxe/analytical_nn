@@ -1,6 +1,6 @@
 import os
 
-from science.collector.api.poloniex_public_controller import app
+from science.collector.controller.poloniex_public_controller import app
 
 if __name__ == '__main__':
     # app.debug = True

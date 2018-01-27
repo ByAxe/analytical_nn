@@ -4,11 +4,11 @@ import json
 import psycopg2
 from flask import Flask, g, request
 
-from science.collector.api.utils import json_response
-from science.collector.poloniex import Poloniex
+from science.collector.core.utils import json_response
+from science.collector.service.poloniex_public_service import PoloniexPublicService
 
 app = Flask(__name__)
-poloniex = Poloniex("APIKey", "Secret".encode())
+poloniexPublicService = PoloniexPublicService()
 
 
 @app.before_request
@@ -17,35 +17,18 @@ def before_request():
     Initializes everything before the first request
     Works similar to post-construct phase in Java
     """
-    g.db = psycopg2.connect(app.config['DATABASE_NAME'])
-    g.cur = g.db.cursor()
+    g.db.connection = psycopg2.connect(app.config['DATABASE_NAME'])
+    g.cur = g.db.connection.cursor()
 
 
 @app.route('/public/currencies', methods=['PUT'])
-def update_currencies():
+def updateCurrencies():
     """
     Synchronizes list of currencies with poloniex api
     :return: elements those were updated
     """
 
-    r = poloniex.returnCurrencies()
-
-    # clear the table
-    g.cur.execute("DELETE FROM poloniex.currencies")
-
-    # prepares the query for insert
-    g.cur.execute("PREPARE currencies_insert_plan AS " +
-                  "INSERT INTO poloniex.currencies "
-                  "(id, symbol, name, min_conf, deposit_address, disabled, delisted, frozen) "
-                  "VALUES ($1, $2, $3, $4, $5, $6, $7, $8)")
-
-    sql = "EXECUTE currencies_insert_plan (%s, %s, %s, %s, %s, %s, %s, %s)"
-
-    # actual insert into DB
-    for symbol, info in r.items():
-        g.cur.execute(sql, (info['id'], symbol, info['name'],
-                            info['minConf'], info['depositAddress'], info['disabled'],
-                            info['delisted'], info['frozen']))
+    r = poloniexPublicService.updateCurrencies()
 
     return json_response(str(r))
 
@@ -74,7 +57,7 @@ def loadMarketTradeHistory():
         start: int = request.args['start']
         end: int = request.args['end']
 
-    r = poloniex.returnMarketTradeHistory(currencyPair, start, end)
+    r = poloniexPublicService.returnMarketTradeHistory(currencyPair, start, end)
 
     return json_response(str(r))
 
@@ -85,6 +68,8 @@ def actualizePairs():
         error = json.dumps({'error': 'Missing field/s (currencyPair, start, end, period)'})
         return json_response(error, 400)
 
+    poloniexPublicService.actualizePairs(request.args['currencyPair'], request.args['start'], request.args['end'],
+                                         request.args['period'])
 
     pass
 
