@@ -84,8 +84,8 @@ BEGIN
     IF NOT FOUND
     THEN
       EXECUTE
-      'CREATE TABLE poloniex.chart_data_' || v_parition_name ||
-      ' INHERITS ( poloniex.chart_data) /*TABLESPACE pgstore_table*/;';
+      'CREATE TABLE poloniex.chart_data_' || v_parition_name || ' ( CHECK ( period = ' || NEW.period ||
+      ')) INHERITS ( poloniex.chart_data) /*TABLESPACE pgstore_table*/;';
       EXECUTE 'CREATE INDEX chart_data_' || v_parition_name || '_date_idx  ON poloniex.chart_data_' ||
               v_parition_name || ' using btree  (date, period) /*TABLESPACE pgstore_idx*/;';
     END IF;

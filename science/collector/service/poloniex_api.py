@@ -89,7 +89,7 @@ class Poloniex:
         return self.api_query("returnMarketTradeHistory",
                               {"currencyPair": currencyPair, 'start': start, 'end': end})
 
-    def returnChartData(self, currencyPair: str, start: int, end: int, period: int) -> object:
+    def returnChartData(self, currencyPair: str, start: int, end: int, period: int) -> list:
         return self.api_query("returnChartData",
                               {'currencyPair': currencyPair, 'start': start, 'end': end, 'period': period})
 

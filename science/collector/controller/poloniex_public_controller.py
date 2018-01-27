@@ -17,8 +17,8 @@ def before_request():
     Initializes everything before the first request
     Works similar to post-construct phase in Java
     """
-    g.db.connection = psycopg2.connect(app.config['DATABASE_NAME'])
-    g.cur = g.db.connection.cursor()
+    g.connection = psycopg2.connect(app.config['DATABASE_NAME'])
+    g.cur = g.connection.cursor()
 
 
 @app.route('/public/currencies', methods=['PUT'])
@@ -62,16 +62,17 @@ def loadMarketTradeHistory():
     return json_response(str(r))
 
 
-@app.route('/public/ticker')
-def actualizePairs():
-    if ('currencyPair' and 'start' and 'end' and 'period') not in request.args:
+@app.route('/public/chartdata/<string:main_currency>/<string:secondary_currency>')
+def loadChartData(main_currency, secondary_currency):
+    if ('start' and 'end' and 'period') not in request.args:
         error = json.dumps({'error': 'Missing field/s (currencyPair, start, end, period)'})
         return json_response(error, 400)
 
-    poloniexPublicService.actualizePairs(request.args['currencyPair'], request.args['start'], request.args['end'],
-                                         request.args['period'])
+    r = poloniexPublicService.actualizePairs(main_currency, secondary_currency,
+                                             int(request.args['start']), int(request.args['end']),
+                                             int(request.args['period']))
 
-    pass
+    return json_response(str(r))
 
 
 @app.errorhandler(404)
