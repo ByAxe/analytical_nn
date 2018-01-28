@@ -17,6 +17,7 @@ PREPARE chart_data_insert_plan AS
 
 PERIODS = [300, 900, 1800, 7200, 14400, 86400]
 ALL = 'all'
+PAUSE_BETWEEN_QUERIES_SECONDS = .200
 
 
 def search_book(books, book_id):

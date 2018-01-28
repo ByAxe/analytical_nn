@@ -1,14 +1,15 @@
+import time
+
 from flask import g
 
 from science.collector.core.utils import CHART_DATA_INSERT_PLAN_SQL, \
-    CURRENCIES_INSERT_PLAN_SQL, PERIODS, MAX_DATA_IN_SINGLE_QUERY, ALL
+    CURRENCIES_INSERT_PLAN_SQL, PERIODS, ALL, MAX_DATA_IN_SINGLE_QUERY
 from science.collector.service.poloniex_api import Poloniex
 
 poloniexApi = Poloniex("APIKey", "Secret".encode())
 
 
 class PoloniexPublicService:
-
     def updateCurrencies(self):
         r = poloniexApi.returnCurrencies()
 
@@ -32,6 +33,84 @@ class PoloniexPublicService:
     def returnMarketTradeHistory(self, currencyPair: str, start: int, end: int) -> object:
         return poloniexApi.returnMarketTradeHistory(currencyPair, start, end)
 
+    def deleteChartData(self, mainCurrency, secondaryCurrency, start, end, period):
+        """
+        Removes all the elements those are fit for parameters
+        If some are not mentioned ==> remove all within current parameter.
+        Example: period is None ==> remove data with all periods
+        :param mainCurrency: main currency of the pair
+        :param secondaryCurrency: second currency of the pair
+        :param start: start of period
+        :param end: end of period
+        :param period: periodicity of data
+        """
+        sql = "DELETE FROM poloniex.chart_data WHERE"
+        sql += " period = " + period if period is not None else ""
+        sql += " date >= " + start if start is not None else ""
+        sql += " date <= " + end if end is not None else ""
+        sql += " main_currency = " + mainCurrency if mainCurrency is not None else ""
+        sql += " secondary_currency = " + secondaryCurrency if secondaryCurrency is not None else ""
+
+        sql = sql[:-5] if sql.endswith("WHERE") else sql
+
+        g.cur.execute(sql)
+        g.connection.commit()
+
+    def loadChartData(self, mainCurrency, secondaryCurrency, start, end, period) -> int:
+        """
+        Loads all the elements within mentioned parameters into DB
+        Wrapper method
+        :param mainCurrency: main currency of the pair
+        :param secondaryCurrency: second currency of the pair
+        :param start: start of period
+        :param end: end of period
+        :param period: periodicity of data
+        :return: amount of elements those were loaded
+        """
+        # to have actual list of currencies
+        self.updateCurrencies()
+        i = 0
+
+        # prepares the query for insert
+        g.cur.execute(CHART_DATA_INSERT_PLAN_SQL)
+
+        periods = self.specifyPeriod(period)
+        mainPairs, secondaryPairs = self.specifyPairs(mainCurrency, secondaryCurrency)
+
+        for p in periods:
+            if mainPairs is None and secondaryPairs is None:
+                i += self._loadChartDataAndSaveToDb(mainCurrency, secondaryCurrency, start, end, p)
+            else:
+                for pair in mainPairs or []:
+                    m, s = pair.split('_')
+                    i += self._loadChartDataAndSaveToDb(m, s, start, end, p)
+                for pair in secondaryPairs or []:
+                    m, s = pair.split('_')
+                    i += self._loadChartDataAndSaveToDb(m, s, start, end, p)
+        return i
+
+    def specifyPeriod(self, period) -> list:
+        return PERIODS if period is None else [period]
+
+    def specifyPairs(self, m, s) -> list:
+        """
+        If there was specified ALL instead of concrete currency -> load every pair from other side
+
+        :param m: main currency of pair
+        :param s: secondary currency of pair
+        :return: list of lists of currency pairs
+        """
+        mainPairs, secondaryPairs = None, None
+
+        if m == ALL and s == ALL:
+            mainPairs = self.returnAllPairs()
+        elif m == ALL:
+            mainPairs = [p for p in self.returnAllPairs() if p.endswith(s)]
+        elif s == ALL:
+            secondaryPairs = [p for p in self.returnAllPairs() if p.startswith(m)]
+
+        return [mainPairs, secondaryPairs]
+
     def returnAllPairs(self):
         """
         Because keys in ticker is a currently available pairs of currencies
@@ -39,61 +118,34 @@ class PoloniexPublicService:
         """
         return poloniexApi.returnTicker().keys()
 
-    def loadChartData(self, mainCurrency, secondaryCurrency, start, end, period) -> int:
-        # to have actual list of currencies
-        self.updateCurrencies()
-        updatedElements = 0
-
-        # If period is not specified -> go through and load the data for each one
-        if period is None:
-            for p in PERIODS:
-                updatedElements = updatedElements + self.loadChartDataAndSplitOnParts(mainCurrency, secondaryCurrency,
-                                                                                      start, end, p)
-        else:
-            updatedElements = self.loadChartDataAndSplitOnParts(mainCurrency, secondaryCurrency, start, end, period)
-        return updatedElements
-
     def loadChartDataAndSplitOnParts(self, mainCurrency, secondaryCurrency, start, end, period) -> int:
+        """
+        Splits the selections on affordable parts and loads into DB
+        Wrapper method
+        :param mainCurrency: main currency of the pair
+        :param secondaryCurrency: second currency of the pair
+        :param start: start of period
+        :param end: end of period
+        :param period: periodicity of data
+        :return: amount of elements those were loaded
+        """
+        updatedElements = 0
         # If the range specified is bigger than allowed maximum - it must be split into affordable parts
         if ((end - start) // period) > MAX_DATA_IN_SINGLE_QUERY:
-            # TODO implement!!
-            pass
+            tempEnd = start
+            while tempEnd <= end:
+                print(int(time.time()), ' Updated Elements: ', updatedElements)
+                tempEnd += period * MAX_DATA_IN_SINGLE_QUERY
+                updatedElements += self._loadChartDataAndSaveToDb(mainCurrency, secondaryCurrency, start,
+                                                                  end if tempEnd > end else tempEnd,
+                                                                  period)
+        else:
+            updatedElements = self._loadChartDataAndSaveToDb(mainCurrency, secondaryCurrency, start, end, period)
+        return updatedElements
 
-        return self.loadChartDataAndSpecifyTheCurrencyPair(mainCurrency, secondaryCurrency, start, end, period)
-
-    def loadChartDataAndSpecifyTheCurrencyPair(self, mainCurrency, secondaryCurrency, start, end, period) -> int:
-        def loadForBunchOfPairs(bunchPairs: list) -> int:
-            """
-            If there was specified ALL instead of concrete currency -> load every pair from other side
-            :param bunchPairs: main and secondary list of pairs those were not specified
-            :return: resulting amount of updated elements
-            """
-            amount = 0
-            for pairs in bunchPairs:
-                for pair in pairs or []:
-                    m, s = pair.split("_")
-                    amount = amount + len(self._loadChartDataAndSaveToDb(m, s, start, end, period))
-
-            return amount
-
-        mainPairs, secondaryPairs = None, None
-
-        # If one, or both mentioned currencies == ALL -> load all actual pairs into list/s
-        if mainCurrency == ALL:
-            mainPairs = [p for p in self.returnAllPairs() if p.startswith(mainCurrency)]
-        if secondaryCurrency == ALL:
-            secondaryPairs = [p for p in self.returnAllPairs() if p.endswith(secondaryCurrency)]
-
-        # if there were no ALL in pairs -> load everything just for specified currency pair
-        if (mainPairs and secondaryPairs) is None:
-            return len(self._loadChartDataAndSaveToDb(mainCurrency, secondaryCurrency, start, end, period))
-
-        # if there was specified ALL instead of concrete currency -> load every pair from other side
-        return loadForBunchOfPairs([mainPairs, secondaryPairs])
-
-    def _loadChartDataAndSaveToDb(self, mainCurrency, secondaryCurrency, start, end, period) -> list:
-        # prepares the query for insert
-        g.cur.execute(CHART_DATA_INSERT_PLAN_SQL)
+    def _loadChartDataAndSaveToDb(self, mainCurrency, secondaryCurrency, start, end, period) -> int:
+        # time.sleep(PAUSE_BETWEEN_QUERIES_SECONDS)
+        print(int(time.time()), ': ', mainCurrency, secondaryCurrency, start, end, period, end='\n\n')
 
         sql = "EXECUTE chart_data_insert_plan (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
 
@@ -101,6 +153,10 @@ class PoloniexPublicService:
         currencyPair = mainCurrency + '_' + secondaryCurrency
         chartData = poloniexApi.returnChartData(currencyPair, start, end, period)
 
+        if not chartData or len(chartData) < 2:
+            return len([])
+
+        print(len(chartData))
         # save the data to DB
         for o in chartData:
             g.cur.execute(sql, (mainCurrency, secondaryCurrency, period,
@@ -110,4 +166,4 @@ class PoloniexPublicService:
                                 o['weightedAverage']))
 
         g.connection.commit()
-        return chartData
+        return len(chartData)

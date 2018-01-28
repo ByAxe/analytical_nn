@@ -45,39 +45,47 @@ def loadMarketTradeHistory():
         error = json.dumps({'error': 'Missing field (currencyPair)'})
         return json_response(error, 400)
 
-    if ('start' or 'end') in request.args:
+    if ('start' or 'end') not in request.args:
         error = json.dumps({'error': 'Missing field (start or end). If you want to specify the range - mention both '
                                      'bounds'})
         return json_response(error, 400)
 
-    currencyPair: str = request.args['currencyPair']
-    start, end = None, None
+    currencyPair = request.args['currencyPair']
 
-    if ('start' and 'end') in request.args:
-        start: int = request.args['start']
-        end: int = request.args['end']
+    start = int(request.args['start']) if 'start' in request.args else None
+    end = int(request.args['end']) if 'end' in request.args else None
 
     r = poloniexPublicService.returnMarketTradeHistory(currencyPair, start, end)
 
     return json_response(str(r))
 
 
-@app.route('/public/chartdata/<string:main_currency>/<string:secondary_currency>')
+@app.route('/public/chartdata/<string:main_currency>/<string:secondary_currency>', methods=['PUT'])
 def loadChartData(main_currency, secondary_currency):
     if ('start' and 'end') not in request.args:
         error = json.dumps({'error': 'Missing field/s (start, end)'})
         return json_response(error, 400)
 
-    period = None
-
-    if 'period' in request.args:
-        period = int(request.args['period'])
+    period = int(request.args['period']) if 'period' in request.args else None
 
     r = poloniexPublicService.loadChartData(main_currency, secondary_currency,
                                             int(request.args['start']), int(request.args['end']),
                                             period)
 
     return json_response(str(r))
+
+
+@app.route('/public/chartdata', methods=['DELETE'])
+def deleteChartData():
+    main_currency = int(request.args['main_currency']) if 'main_currency' in request.args else None
+    secondary_currency = int(request.args['secondary_currency']) if 'secondary_currency' in request.args else None
+    start = int(request.args['start']) if 'start' in request.args else None
+    end = int(request.args['end']) if 'end' in request.args else None
+    period = int(request.args['period']) if 'period' in request.args else None
+
+    poloniexPublicService.deleteChartData(main_currency, secondary_currency, start, end, period)
+
+    return json_response()
 
 
 @app.errorhandler(404)
