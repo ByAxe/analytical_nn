@@ -3,6 +3,7 @@ import json
 
 import psycopg2
 from flask import Flask, g, request
+from psycopg2.extras import DictCursor
 
 from science.collector.core.utils import json_response
 from science.collector.service.poloniex_public_service import PoloniexPublicService
@@ -18,7 +19,7 @@ def before_request():
     Works similar to post-construct phase in Java
     """
     g.connection = psycopg2.connect(app.config['DATABASE_NAME'])
-    g.cur = g.connection.cursor()
+    g.cur = g.connection.cursor(cursor_factory=psycopg2.extras.DictCursor)
 
 
 @app.route('/public/currencies', methods=['PUT'])
@@ -77,15 +78,31 @@ def loadChartData(main_currency, secondary_currency):
 
 @app.route('/public/chartdata', methods=['DELETE'])
 def deleteChartData():
-    main_currency = int(request.args['main_currency']) if 'main_currency' in request.args else None
-    secondary_currency = int(request.args['secondary_currency']) if 'secondary_currency' in request.args else None
-    start = int(request.args['start']) if 'start' in request.args else None
-    end = int(request.args['end']) if 'end' in request.args else None
-    period = int(request.args['period']) if 'period' in request.args else None
+    main_currency = request.args['main_currency'] if 'main_currency' in request.args else None
+    secondary_currency = request.args['secondary_currency'] if 'secondary_currency' in request.args else None
+    start = request.args['start'] if 'start' in request.args else None
+    end = request.args['end'] if 'end' in request.args else None
+    period = request.args['period'] if 'period' in request.args else None
 
     poloniexPublicService.deleteChartData(main_currency, secondary_currency, start, end, period)
 
     return json_response()
+
+
+@app.route('/public/chartdata')
+def getChartData():
+    main_currency = request.args['main_currency'] if 'main_currency' in request.args else None
+    secondary_currency = request.args['secondary_currency'] if 'secondary_currency' in request.args else None
+    start = request.args['start'] if 'start' in request.args else None
+    end = request.args['end'] if 'end' in request.args else None
+    period = request.args['period'] if 'period' in request.args else None
+    fields = request.args['fields'].split(',') if 'fields' in request.args else None
+    limit = request.args['limit'] if 'limit' in request.args else None
+
+    result = poloniexPublicService.getChartData(main_currency, secondary_currency, start, end, period,
+                                                fields=fields,
+                                                limit=limit)
+    return json_response(str(result))
 
 
 @app.errorhandler(404)

@@ -48,8 +48,8 @@ class PoloniexPublicService:
         sql += " period = " + period if period is not None else ""
         sql += " date >= " + start if start is not None else ""
         sql += " date <= " + end if end is not None else ""
-        sql += " main_currency = " + mainCurrency if mainCurrency is not None else ""
-        sql += " secondary_currency = " + secondaryCurrency if secondaryCurrency is not None else ""
+        sql += " main_currency = \'" + mainCurrency + "\'" if mainCurrency is not None else ""
+        sql += " secondary_currency = \'" + secondaryCurrency + "\'" if secondaryCurrency is not None else ""
 
         sql = sql[:-5] if sql.endswith("WHERE") else sql
 
@@ -167,3 +167,22 @@ class PoloniexPublicService:
 
         g.connection.commit()
         return len(chartData)
+
+    def getChartData(self, mainCurrency, secondaryCurrency, start, end, period, fields: list = None,
+                     limit='1000') -> list:
+        sql = "SELECT "
+
+        sql += ', '.join(fields) if fields is not None else "*"
+        sql += " FROM poloniex.chart_data WHERE"
+
+        sql += " period = " + period if period is not None else ""
+        sql += " date >= " + start if start is not None else ""
+        sql += " date <= " + end if end is not None else ""
+        sql += " main_currency = \'" + mainCurrency + "\'" if mainCurrency is not None else ""
+        sql += " secondary_currency = \'" + secondaryCurrency + "\'" if secondaryCurrency is not None else ""
+
+        sql = sql[:-5] if sql.endswith("WHERE") else sql
+        sql += " LIMIT " + limit if limit is not None else ""
+
+        g.cur.execute(sql)
+        return g.cur.fetchall()
