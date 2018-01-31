@@ -9,7 +9,7 @@ from science.collector.core.utils import json_response
 from science.collector.service.poloniex_public_service import PoloniexPublicService
 
 app = Flask(__name__)
-poloniexPublicService = PoloniexPublicService()
+poloniexPublicService = None
 
 
 @app.before_request
@@ -20,6 +20,8 @@ def before_request():
     """
     g.connection = psycopg2.connect(app.config['DATABASE_NAME'])
     g.cur = g.connection.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    global poloniexPublicService
+    poloniexPublicService = PoloniexPublicService(g.connection, g.cur)
 
 
 @app.route('/public/currencies', methods=['PUT'])

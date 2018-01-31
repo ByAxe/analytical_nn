@@ -1,6 +1,5 @@
 import time
-
-from flask import g
+from datetime import datetime
 
 from science.collector.core.utils import CHART_DATA_INSERT_PLAN_SQL, \
     CURRENCIES_INSERT_PLAN_SQL, PERIODS, ALL, MAX_DATA_IN_SINGLE_QUERY
@@ -10,24 +9,31 @@ poloniexApi = Poloniex("APIKey", "Secret".encode())
 
 
 class PoloniexPublicService:
+    connection = None
+    cursor = None
+
+    def __init__(self, connection, cursor):
+        self.connection = connection
+        self.cursor = cursor
+
     def updateCurrencies(self):
         r = poloniexApi.returnCurrencies()
 
         # clear the table
-        g.cur.execute("DELETE FROM poloniex.currencies")
+        self.cursor.execute("DELETE FROM poloniex.currencies")
 
         # prepares the query for insert
-        g.cur.execute(CURRENCIES_INSERT_PLAN_SQL)
+        self.cursor.execute(CURRENCIES_INSERT_PLAN_SQL)
 
         sql = "EXECUTE currencies_insert_plan (%s, %s, %s, %s, %s, %s, %s, %s)"
 
         # actual insert into DB
         for symbol, info in r.items():
-            g.cur.execute(sql, (info['id'], symbol, info['name'],
-                                info['minConf'], info['depositAddress'], info['disabled'],
-                                info['delisted'], info['frozen']))
+            self.cursor.execute(sql, (info['id'], symbol, info['name'],
+                                      info['minConf'], info['depositAddress'], info['disabled'],
+                                      info['delisted'], info['frozen']))
 
-        g.connection.commit()
+        self.connection.commit()
         return r
 
     def returnMarketTradeHistory(self, currencyPair: str, start: int, end: int) -> object:
@@ -53,8 +59,8 @@ class PoloniexPublicService:
 
         sql = sql[:-5] if sql.endswith("WHERE") else sql
 
-        g.cur.execute(sql)
-        g.connection.commit()
+        self.cursor.execute(sql)
+        self.connection.commit()
 
     def loadChartData(self, mainCurrency, secondaryCurrency, start, end, period) -> int:
         """
@@ -72,7 +78,7 @@ class PoloniexPublicService:
         i = 0
 
         # prepares the query for insert
-        g.cur.execute(CHART_DATA_INSERT_PLAN_SQL)
+        self.cursor.execute(CHART_DATA_INSERT_PLAN_SQL)
 
         periods = self.specifyPeriod(period)
         mainPairs, secondaryPairs = self.specifyPairs(mainCurrency, secondaryCurrency)
@@ -159,13 +165,13 @@ class PoloniexPublicService:
         print(len(chartData))
         # save the data to DB
         for o in chartData:
-            g.cur.execute(sql, (mainCurrency, secondaryCurrency, period,
-                                o['date'],
-                                o['high'], o['low'], o['open'], o['close'],
-                                o['volume'], o['quoteVolume'],
-                                o['weightedAverage']))
+            self.cursor.execute(sql, (mainCurrency, secondaryCurrency, period,
+                                      o['date'],
+                                      o['high'], o['low'], o['open'], o['close'],
+                                      o['volume'], o['quoteVolume'],
+                                      o['weightedAverage']))
 
-        g.connection.commit()
+        self.connection.commit()
         return len(chartData)
 
     def getChartData(self, mainCurrency, secondaryCurrency, start, end, period, fields: list = None,
@@ -185,8 +191,8 @@ class PoloniexPublicService:
         sql = sql[:-5] if sql.endswith("WHERE") else sql
         sql += " LIMIT " + limit if limit is not None else ""
 
-        g.cur.execute(sql)
-        return g.cur.fetchall()
+        self.cursor.execute(sql)
+        return self.cursor.fetchall()
 
     def saveChartDataToCSV(self, main_currency, secondary_currency, start, end, period):
         import pandas as pd
@@ -197,5 +203,7 @@ class PoloniexPublicService:
                    'open', 'close', 'volume', 'quote_volume', 'weighted_average']
 
         df = pd.DataFrame([i.copy() for i in chartData], columns=columns)
+
+        df['date'] = df['date'].apply(lambda d: datetime.fromtimestamp(d).strftime('%Y-%m-%d %H:%M:%S'))
 
         df.to_csv('dataset.csv')
