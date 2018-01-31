@@ -175,14 +175,27 @@ class PoloniexPublicService:
         sql += ', '.join(fields) if fields is not None else "*"
         sql += " FROM poloniex.chart_data WHERE"
 
-        sql += " period = " + period if period is not None else ""
-        sql += " date >= " + start if start is not None else ""
-        sql += " date <= " + end if end is not None else ""
-        sql += " main_currency = \'" + mainCurrency + "\'" if mainCurrency is not None else ""
-        sql += " secondary_currency = \'" + secondaryCurrency + "\'" if secondaryCurrency is not None else ""
+        sql += " period = " + period + " AND" if period is not None else ""
+        sql += " date >= " + start + " AND" if start is not None else ""
+        sql += " date <= " + end + " AND" if end is not None else ""
+        sql += " main_currency = \'" + mainCurrency + "\'" + " AND" if mainCurrency is not None else ""
+        sql += " secondary_currency = \'" + secondaryCurrency + "\'" + " AND" if secondaryCurrency is not None else ""
 
+        sql = sql[:-4] if sql.endswith(" AND") else sql
         sql = sql[:-5] if sql.endswith("WHERE") else sql
         sql += " LIMIT " + limit if limit is not None else ""
 
         g.cur.execute(sql)
         return g.cur.fetchall()
+
+    def saveChartDataToCSV(self, main_currency, secondary_currency, start, end, period):
+        import pandas as pd
+
+        chartData = self.getChartData(main_currency, secondary_currency, start, end, period, limit=None)
+
+        columns = ['main_currency', 'secondary_currency', 'date', 'period', 'high', 'low',
+                   'open', 'close', 'volume', 'quote_volume', 'weighted_average']
+
+        df = pd.DataFrame([i.copy() for i in chartData], columns=columns)
+
+        df.to_csv('dataset.csv')

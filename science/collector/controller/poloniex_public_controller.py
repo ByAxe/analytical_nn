@@ -105,6 +105,18 @@ def getChartData():
     return json_response(str(result))
 
 
+@app.route('/public/csv/chartdata')
+def saveChartDataToCSV():
+    main_currency = request.args['main_currency'] if 'main_currency' in request.args else None
+    secondary_currency = request.args['secondary_currency'] if 'secondary_currency' in request.args else None
+    start = request.args['start'] if 'start' in request.args else None
+    end = request.args['end'] if 'end' in request.args else None
+    period = request.args['period'] if 'period' in request.args else None
+
+    poloniexPublicService.saveChartDataToCSV(main_currency, secondary_currency, start, end, period)
+    return json_response()
+
+
 @app.errorhandler(404)
 def not_found(e):
     return e, 404
