@@ -184,8 +184,8 @@ class PoloniexPublicService:
         sql += " period = " + period + " AND" if period is not None else ""
         sql += " date >= " + start + " AND" if start is not None else ""
         sql += " date <= " + end + " AND" if end is not None else ""
-        sql += " main_currency = \'" + mainCurrency + "\'" + " AND" if mainCurrency is not None else ""
-        sql += " secondary_currency = \'" + secondaryCurrency + "\'" + " AND" if secondaryCurrency is not None else ""
+        sql += " main_currency = '" + mainCurrency + "'" + " AND" if mainCurrency is not None else ""
+        sql += " secondary_currency = '" + secondaryCurrency + "'" + " AND" if secondaryCurrency is not None else ""
 
         sql = sql[:-4] if sql.endswith(" AND") else sql
         sql = sql[:-5] if sql.endswith("WHERE") else sql

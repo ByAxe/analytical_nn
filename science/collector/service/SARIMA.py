@@ -1,10 +1,10 @@
 from cmath import log
 
 import psycopg2
-from matplotlib import pyplot
 from pandas import read_csv
 from psycopg2.extras import DictCursor
 from rpy2.robjects import pandas2ri
+from rpy2.robjects.packages import importr
 
 from science.collector.service.poloniex_public_service import PoloniexPublicService
 
@@ -15,13 +15,20 @@ cursor = connection.cursor(cursor_factory=psycopg2.extras.DictCursor)
 
 poloniexPublicService = PoloniexPublicService(connection, cursor)
 
-chartData = poloniexPublicService.saveChartDataToCSV('ETH', None, None, None, '300')
+poloniexPublicService.saveChartDataToCSV(main_currency='BTC', secondary_currency='ETH', start='1483218000',
+                                         end='1514754000', period='300')
 
 dataset = read_csv('dataset.csv', index_col=['date'], parse_dates=['date'], dayfirst=True,
                    usecols=['date', 'weighted_average'])
 
-print(dataset)
-log(dataset)
+dataset['weighted_average'] = dataset['weighted_average'].apply(lambda w: log(w))
+stats = importr('stats')
+tseries = importr('tseries')
 
-dataset.plot(figsize=(12, 6))
-pyplot.show()
+r_df = pandas2ri.py2ri(dataset)
+y = stats.ts(r_df)
+
+ad = tseries.adf_test(y, alternative="stationary", k=52)
+
+# dataset.plot(figsize=(12, 6))
+# pyplot.show()
