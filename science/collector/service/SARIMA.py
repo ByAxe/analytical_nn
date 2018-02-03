@@ -22,6 +22,7 @@ dataset = read_csv('dataset.csv', index_col=['date'], parse_dates=['date'], dayf
                    usecols=['date', 'weighted_average'])
 
 dataset['weighted_average'] = dataset['weighted_average'].apply(lambda w: log(w))
+
 stats = importr('stats')
 tseries = importr('tseries')
 
@@ -29,6 +30,11 @@ r_df = pandas2ri.py2ri(dataset)
 y = stats.ts(r_df)
 
 ad = tseries.adf_test(y, alternative="stationary", k=52)
+
+diff1lev = dataset.diff(periods=1).dropna()
+diff1lev_season = diff1lev.diff(52).dropna()
+diff1lev.plot(figsize=(12, 6))
+# print('p.value: %f' % sm.tsa.adfuller(diff1lev, maxlag=52)[1])
 
 # dataset.plot(figsize=(12, 6))
 # pyplot.show()
