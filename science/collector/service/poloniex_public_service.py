@@ -194,7 +194,7 @@ class PoloniexPublicService:
         self.cursor.execute(sql)
         return self.cursor.fetchall()
 
-    def saveChartDataToCSV(self, main_currency, secondary_currency, start, end, period):
+    def saveChartDataToCSV(self, main_currency, secondary_currency, start, end, period, file_name='dataset'):
         import pandas as pd
 
         chartData = self.getChartData(main_currency, secondary_currency, start, end, period, limit=None)
@@ -206,4 +206,4 @@ class PoloniexPublicService:
 
         df['date'] = df['date'].apply(lambda d: datetime.fromtimestamp(d).strftime('%Y-%m-%d %H:%M:%S'))
 
-        df.to_csv('dataset.csv')
+        df.to_csv(file_name + '.csv')
