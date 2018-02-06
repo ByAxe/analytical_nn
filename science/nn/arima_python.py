@@ -53,7 +53,7 @@ def evaluate_model(params, train, test, print_period=10):
         obs = test[t]
         train.append(obs)
 
-        if (t // print_period) == 0:
+        if (t % print_period) == 0:
             print('predicted=%f, expected=%f' % (yhat, obs))
 
     error = mean_squared_error(test, predictions)
@@ -92,16 +92,16 @@ def choose_the_best_params():
 
     iteration = 0
 
-    for P in P_list:
-        for D in D_list:
-            for Q in Q_list:
-                for s in s_list:
+    for s in s_list:
+        for P in P_list:
+            for D in D_list:
+                for Q in Q_list:
                     # Week evaluation
-                    week_rmse = evaluate_model([P, D, Q, s], train=week_train, test=week_test)
+                    week_rmse = evaluate_model([P, D, Q, s], train=week_train, test=week_test, print_period=50)
 
                     # Month evaluation
                     month_rmse = evaluate_model([P, D, Q, s], train=month_train, test=month_test,
-                                                print_period=50)
+                                                print_period=100)
 
                     # Average RMSE
                     RMSE_NEW = (week_rmse + month_rmse) / 2
@@ -112,7 +112,7 @@ def choose_the_best_params():
 
                     # print something
                     iteration += 1
-                    print('Iteration number =', iteration)
+                    print('\nIteration number =', iteration)
                     print('\tBest for now: ', best)
 
     return best
