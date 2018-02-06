@@ -4,6 +4,7 @@ from datetime import date
 from math import sqrt
 
 import psycopg2
+from hyperopt import fmin, tpe, hp, Trials
 from pandas import read_csv
 from psycopg2.extras import DictCursor
 from sklearn.metrics import mean_squared_error
@@ -12,6 +13,8 @@ from statsmodels.tsa.statespace.sarimax import SARIMAX
 from science.collector.service.poloniex_public_service import PoloniexPublicService
 
 warnings.filterwarnings('ignore')
+
+week_train, week_test, month_train, month_test = [], [], [], []
 
 
 def prepare_csv(week_range, month_range):
@@ -43,7 +46,7 @@ def evaluate_model(params, train, test, print_period=10):
     predictions = list()
 
     for t in range(len(test)):
-        model = SARIMAX(train, seasonal_order=(P, D, Q, s), enforce_stationarity=False)
+        model = SARIMAX(train, seasonal_order=(P, D, Q, s), enforce_stationarity=False, enforce_invertibility=False)
         model_fit = model.fit(disp=0, maxiter=1000, method='nm')
 
         output = model_fit.forecast()
@@ -134,5 +137,44 @@ def main():
     print(params_dict)
 
 
+def objective(params):
+    [P, D, Q, s] = params['P'], params['D'], params['Q'], params['s']
+
+    # Week evaluation
+    week_rmse = evaluate_model([P, D, Q, s], train=week_train, test=week_test, print_period=50)
+
+    # Month evaluation
+    month_rmse = evaluate_model([P, D, Q, s], train=month_train, test=month_test,
+                                print_period=100)
+
+    # Average RMSE
+    return (week_rmse + month_rmse) / 2
+
+
+def hyperopt_test():
+    global week_train, week_test, month_train, month_test
+    [week_train, week_test, month_train, month_test] = prepare_data()
+
+    week = {'train': week_train, 'test': week_test}
+    month = {'train': month_train, 'test': month_test}
+
+    space = {
+        'P': 0 + hp.randint('P', 10),
+        'D': 0 + hp.randint('D', 10),
+        'Q': 0 + hp.randint('Q', 10),
+        's': 0 + hp.randint('s', 12)
+    }
+
+    # The Trials object will store details of each iteration
+    trials = Trials()
+
+    best = fmin(fn=objective, space=space, algo=tpe.suggest, max_evals=100, trials=trials)
+
+    print('best: ', best)
+
+    for trial in trials[:2]:
+        print(trial)
+
+
 if __name__ == '__main__':
-    main()
+    hyperopt_test()
