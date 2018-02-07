@@ -4,9 +4,12 @@ from datetime import date
 from math import sqrt
 
 import psycopg2
-from hyperopt import fmin, tpe, hp, Trials
+import pymongo
+from hyperopt import fmin, tpe, hp
+from hyperopt.mongoexp import MongoTrials
 from pandas import read_csv
 from psycopg2.extras import DictCursor
+from pymongo.database import Database
 from sklearn.metrics import mean_squared_error
 from statsmodels.tsa.statespace.sarimax import SARIMAX
 
@@ -137,21 +140,20 @@ def main():
     print(params_dict)
 
 
-def objective(params):
-    [P, D, Q, s] = params['P'], params['D'], params['Q'], params['s']
-
-    # Week evaluation
-    week_rmse = evaluate_model([P, D, Q, s], train=week_train, test=week_test, print_period=50)
-
-    # Month evaluation
-    month_rmse = evaluate_model([P, D, Q, s], train=month_train, test=month_test,
-                                print_period=100)
-
-    # Average RMSE
-    return (week_rmse + month_rmse) / 2
-
-
 def hyperopt_test():
+    def objective(params):
+        [P, D, Q, s] = params['P'], params['D'], params['Q'], params['s']
+
+        # Week evaluation
+        week_rmse = evaluate_model([P, D, Q, s], train=week_train, test=week_test, print_period=50)
+
+        # Month evaluation
+        month_rmse = evaluate_model([P, D, Q, s], train=month_train, test=month_test,
+                                    print_period=100)
+
+        # Average RMSE
+        return (week_rmse + month_rmse) / 2
+
     global week_train, week_test, month_train, month_test
     [week_train, week_test, month_train, month_test] = prepare_data()
 
@@ -162,13 +164,19 @@ def hyperopt_test():
         'P': 0 + hp.randint('P', 10),
         'D': 0 + hp.randint('D', 10),
         'Q': 0 + hp.randint('Q', 10),
-        's': 0 + hp.randint('s', 12)
+        's': 0 + hp.randint('s', 288)
     }
 
-    # The Trials object will store details of each iteration
-    trials = Trials()
+    client = pymongo.MongoClient(
+        'mongodb://hyperopt:mongodb@cluster0-shard-00-00-ywm08.mongodb.net:27017,cluster0-shard-00-01-ywm08.mongodb.net:27017,cluster0-shard-00-02-ywm08.mongodb.net:27017/test?ssl=true&replicaSet=Cluster0-shard-0&authSource=admin')
+    db: Database = client.test
+    db.create_collection('sarima')
 
-    best = fmin(fn=objective, space=space, algo=tpe.suggest, max_evals=100, trials=trials)
+    # The Trials object will store details of each iteration
+    # trials = MongoTrials('mongo://localhost:1234/foo_db/jobs', exp_key='exp1')
+    trials = MongoTrials('mongo+ssh://mongodb:mongodb@cluster0-shard-00-00-ywm08.mongodb.net:27017'
+                         '/test?ssl=true&replicaSet=Cluster0-shard-0&authSource=admin', exp_key='exp1')
+    best = fmin(fn=objective, space=space, algo=tpe.suggest, max_evals=1000, trials=trials)
 
     print('best: ', best)
 
