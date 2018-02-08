@@ -1,15 +1,14 @@
 import calendar
+import multiprocessing
 import warnings
 from datetime import date
 from math import sqrt
+from multiprocessing import Process
+from operator import itemgetter
 
 import psycopg2
-import pymongo
-from hyperopt import fmin, tpe, hp
-from hyperopt.mongoexp import MongoTrials
 from pandas import read_csv
 from psycopg2.extras import DictCursor
-from pymongo.database import Database
 from sklearn.metrics import mean_squared_error
 from statsmodels.tsa.statespace.sarimax import SARIMAX
 
@@ -18,6 +17,7 @@ from science.collector.service.poloniex_public_service import PoloniexPublicServ
 warnings.filterwarnings('ignore')
 
 week_train, week_test, month_train, month_test = [], [], [], []
+trials = []
 
 
 def prepare_csv(week_range, month_range):
@@ -43,7 +43,10 @@ def split_data(series, percentage):
     return [history, test]
 
 
-def evaluate_model(params, train, test, print_period=10):
+def evaluate_model(params, train, test, print_period=50):
+    global trials
+
+    print('Starting evaluation of model with params:', params)
     [P, D, Q, s] = params
 
     predictions = list()
@@ -60,17 +63,20 @@ def evaluate_model(params, train, test, print_period=10):
         train.append(obs)
 
         if (t % print_period) == 0:
-            print('predicted=%f, expected=%f' % (yhat, obs))
+            print('Params:', params, 'predicted=%f, expected=%f' % (yhat, obs))
 
     error = mean_squared_error(test, predictions)
     rmse = sqrt(error)
-    return rmse
+
+    trials.append({'P': P, 'D': D, 'Q': Q, 's': s, 'RMSE': rmse})
+    # return rmse
+    # return P + Q + D + s
 
 
 def prepare_params():
-    P_list = range(5)
-    D_list = range(5)
-    Q_list = range(5)
+    P_list = range(6)
+    D_list = range(6)
+    Q_list = range(6)
     s_list = [0, 1, 2, 4, 6, 12, 24, 48, 60, 144, 288, 576]
 
     return [P_list, D_list, Q_list, s_list]
@@ -91,37 +97,25 @@ def prepare_data():
 
 
 def choose_the_best_params():
-    best = {'P': 0, 'D': 0, 'Q': 0, 's': 0, 'RMSE': 100000}
-
     [P_list, D_list, Q_list, s_list] = prepare_params()
     [week_train, week_test, month_train, month_test] = prepare_data()
 
-    iteration = 0
+    # processes = []
 
     for s in s_list:
         for P in P_list:
             for D in D_list:
+                processes = []
                 for Q in Q_list:
-                    # Week evaluation
-                    week_rmse = evaluate_model([P, D, Q, s], train=week_train, test=week_test, print_period=50)
-
-                    # Month evaluation
-                    month_rmse = evaluate_model([P, D, Q, s], train=month_train, test=month_test,
-                                                print_period=100)
-
-                    # Average RMSE
-                    RMSE_NEW = (week_rmse + month_rmse) / 2
-
-                    # Choosing the best parameters
-                    if best['RMSE'] > RMSE_NEW:
-                        best['P'], best['D'], best['Q'], best['s'], best['RMSE'], = P, D, Q, s, RMSE_NEW
-
-                    # print something
-                    iteration += 1
-                    print('\nIteration number =', iteration)
-                    print('\tBest for now: ', best)
-
-    return best
+                    try:
+                        new_process = multiprocessing.Process(target=evaluate_model,
+                                                              args=[[P, D, Q, s], week_train, week_test])
+                        new_process.start()
+                        processes.append(new_process)
+                    except BaseException:
+                        print('Exception Occurred!')
+                for p in processes:
+                    p.join()
 
 
 def main():
@@ -135,54 +129,14 @@ def main():
     month_range = {'start': month_start, 'end': month_end}
 
     prepare_csv(month_range, week_range)
+    choose_the_best_params()
+    top = sorted(trials, key=itemgetter('RMSE'), reverse=True)[:3]
 
-    params_dict = choose_the_best_params()
-    print(params_dict)
+    for r in top:
+        print(r)
 
-
-def hyperopt_test():
-    def objective(params):
-        [P, D, Q, s] = params['P'], params['D'], params['Q'], params['s']
-
-        # Week evaluation
-        week_rmse = evaluate_model([P, D, Q, s], train=week_train, test=week_test, print_period=50)
-
-        # Month evaluation
-        month_rmse = evaluate_model([P, D, Q, s], train=month_train, test=month_test,
-                                    print_period=100)
-
-        # Average RMSE
-        return (week_rmse + month_rmse) / 2
-
-    global week_train, week_test, month_train, month_test
-    [week_train, week_test, month_train, month_test] = prepare_data()
-
-    week = {'train': week_train, 'test': week_test}
-    month = {'train': month_train, 'test': month_test}
-
-    space = {
-        'P': 0 + hp.randint('P', 10),
-        'D': 0 + hp.randint('D', 10),
-        'Q': 0 + hp.randint('Q', 10),
-        's': 0 + hp.randint('s', 288)
-    }
-
-    client = pymongo.MongoClient(
-        'mongodb://hyperopt:mongodb@cluster0-shard-00-00-ywm08.mongodb.net:27017,cluster0-shard-00-01-ywm08.mongodb.net:27017,cluster0-shard-00-02-ywm08.mongodb.net:27017/test?ssl=true&replicaSet=Cluster0-shard-0&authSource=admin')
-    db: Database = client.test
-    db.create_collection('sarima')
-
-    # The Trials object will store details of each iteration
-    # trials = MongoTrials('mongo://localhost:1234/foo_db/jobs', exp_key='exp1')
-    trials = MongoTrials('mongo+ssh://mongodb:mongodb@cluster0-shard-00-00-ywm08.mongodb.net:27017'
-                         '/test?ssl=true&replicaSet=Cluster0-shard-0&authSource=admin', exp_key='exp1')
-    best = fmin(fn=objective, space=space, algo=tpe.suggest, max_evals=1000, trials=trials)
-
-    print('best: ', best)
-
-    for trial in trials[:2]:
-        print(trial)
+    # print(params_dict)
 
 
 if __name__ == '__main__':
-    hyperopt_test()
+    main()
