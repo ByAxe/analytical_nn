@@ -12,7 +12,7 @@ from psycopg2.extras import DictCursor
 from sklearn.metrics import mean_squared_error
 from statsmodels.tsa.statespace.sarimax import SARIMAX
 
-from science.collector.service.poloniex_public_service import PoloniexPublicService
+from science.collector.service.poloniex_service import PoloniexPublicService
 
 warnings.filterwarnings('ignore')
 

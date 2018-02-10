@@ -6,10 +6,11 @@ from flask import Flask, g, request
 from psycopg2.extras import DictCursor
 
 from science.collector.core.utils import json_response
-from science.collector.service.poloniex_public_service import PoloniexPublicService
+from science.collector.service.poloniex_service import PoloniexPublicService
 
 app = Flask(__name__)
 poloniexPublicService = None
+cycle = None
 
 
 @app.before_request
@@ -125,30 +126,13 @@ def fireCycle():
     Fires the cycle of trading on poloniex with given parameters
     :return: success if everything is OK, and fail if not OR it is already running
     """
-    # TODO Get everything from body to start cycle
+    # TODO 1) Extract everything from body
 
-    # TODO If cycle already started - say it
+    # TODO 2) pass all the params into cycle.fireCycle() method
+
+    # TODO 3) If cycle already started - say it
 
     return json_response()
-
-
-@app.route('/private/cycle', methods=['PUT'])
-def stopCycle():
-    """
-    TODO Stops the cycle of trading on poloniex
-    :return: success if everything is it stopped
-    """
-    return json_response()
-
-
-@app.route('/private/cycle', methods=['GET'])
-def isRunning():
-    """
-    TODO Is application currently running?
-    :return:
-    """
-    return json_response()
-
 
 @app.errorhandler(404)
 def not_found(e):
