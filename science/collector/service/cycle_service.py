@@ -28,19 +28,6 @@ class Cycle:
 
         return {}
 
-    def stopCycle(self):
-        """
-        TODO insert docs
-        """
-        self.isRunning = False
-
-    def is_running(self) -> bool:
-        """
-        TODO insert docs
-        :return:
-        """
-        return self.isRunning
-
     class Trader:
         poloniex_service: PoloniexPublicService
 
