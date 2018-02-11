@@ -84,7 +84,6 @@ def prepare_data():
     [train, test] = split_data(data, 0.995)
 
     return [train, test]
-    # return [[], []]
 
 
 def choose_the_best_params():

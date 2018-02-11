@@ -124,6 +124,16 @@ def saveChartDataToCSV():
 def fireCycle():
     """
     Fires the cycle of trading on poloniex with given parameters
+
+    Incoming parameters for one iteration: Budget, Trading pairs, Allowed risk
+        - Budget: allowed overall maximum (measured in USD) for all operations during the iteration
+        - Trading pairs: the list of pairs among those algorithm creates a plan
+        - Allowed risk: The number of steps that a trader will count on when building a plan,
+            as what exactly should happen. Measured in %.
+            Risk = 100% means that algorithm will count on farthest predicted step,
+                as if it must happen.
+            Risk = 0% means that algorithm only counts on the closest predicted step
+
     :return: success if everything is OK, and fail if not OR it is already running
     """
     # TODO 1) Extract everything from body
@@ -133,6 +143,7 @@ def fireCycle():
     # TODO 3) If cycle already started - say it
 
     return json_response()
+
 
 @app.errorhandler(404)
 def not_found(e):
