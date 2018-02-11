@@ -6,11 +6,12 @@ from flask import Flask, g, request
 from psycopg2.extras import DictCursor
 
 from science.collector.core.utils import json_response
+from science.collector.service.cycle_service import Cycle
 from science.collector.service.poloniex_service import PoloniexPublicService
 
 app = Flask(__name__)
-poloniexPublicService = None
-cycle = None
+poloniexPublicService: PoloniexPublicService = None
+cycle: Cycle = None
 
 
 @app.before_request
@@ -21,8 +22,10 @@ def before_request():
     """
     g.connection = psycopg2.connect(app.config['DATABASE_NAME'])
     g.cur = g.connection.cursor(cursor_factory=psycopg2.extras.DictCursor)
-    global poloniexPublicService
+
+    global poloniexPublicService, cycle
     poloniexPublicService = PoloniexPublicService(g.connection, g.cur)
+    cycle = Cycle(poloniexPublicService)
 
 
 @app.route('/public/currencies', methods=['PUT'])
@@ -121,28 +124,19 @@ def saveChartDataToCSV():
 
 
 @app.route('/private/cycle', methods=['POST'])
-def fireCycle():
+def startCycleIteration():
     """
-    Fires the cycle of trading on poloniex with given parameters
-
-    Incoming parameters for one iteration: Budget, Trading pairs, Allowed risk
-        - Budget: allowed overall maximum (measured in USD) for all operations during the iteration
-        - Trading pairs: the list of pairs among those algorithm creates a plan
-        - Allowed risk: The number of steps that a trader will count on when building a plan,
-            as what exactly should happen. Measured in %.
-            Risk = 100% means that algorithm will count on farthest predicted step,
-                as if it must happen.
-            Risk = 0% means that algorithm only counts on the closest predicted step
-
+    Fires the cycle iteration of trading on poloniex with given parameters
     :return: success if everything is OK, and fail if not OR it is already running
     """
-    # TODO 1) Extract everything from body
+    # Extract incoming params from request
+    params = request.get_json()
 
-    # TODO 2) pass all the params into cycle.fireCycle() method
+    # pass everything to service method
+    operations = cycle.startCycleIteration(params)
 
-    # TODO 3) If cycle already started - say it
-
-    return json_response()
+    #  return created plan and made operations
+    return json_response(str(operations))
 
 
 @app.errorhandler(404)
