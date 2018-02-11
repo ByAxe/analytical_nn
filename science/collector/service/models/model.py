@@ -14,4 +14,5 @@ class Model:
         """
         Choose an algorithm and make a prediction for given data
         """
-        pass
+        # TODO implement
+        return {}

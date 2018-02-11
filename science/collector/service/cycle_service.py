@@ -1,3 +1,6 @@
+from datetime import datetime, timedelta
+
+from science.collector.core.utils import WINDOWS
 from science.collector.service.models.model import Model
 from science.collector.service.poloniex_service import PoloniexPublicService
 
@@ -18,7 +21,6 @@ class Cycle:
         """
         # take all the params those were passed into method and wraps in up into Object
         params = self.Parameters(params_dict)
-
         # get all the data from Poloniex
         data = self.getAllDataForParams(params.pairs, params.window, params.period)
 
@@ -36,14 +38,57 @@ class Cycle:
         # return performed operations
         return operations
 
-    def getAllDataForParams(self, paris, window, period) -> dict:
+    def getAllDataForParams(self, pairs: list, window: dict, period: int) -> dict:
         """
         Wraps up all logic for getting data from poloniex
-        :param paris: list of pairs
+        :param pairs: list of pairs
         :param window: window of data on that prediction will be made
         :param period: periodicity of data
         :return: The data from poloniex for specified params
         """
+        data: dict
+
+        # parse the window to get boundaries for selection
+        start, end = self.parseWindow(window)
+
+        for pair in pairs:
+            mainCurrency, secondaryCurrency = pair.split('_')
+            chartData = self.poloniex_service.loadChartData(mainCurrency, secondaryCurrency, start, end, period)
+            data[pair] = chartData
+        return data
+
+    def parseWindow(self, window_dict: dict):
+        """
+        Parse the window into boundaries (start, end)
+        :param window_dict of data on that prediction will be made
+                Example: {'WEEK':2}
+        :return: two bounds for selection
+        """
+        start, end, window, amount = None, None, None, None
+        defaultWindow, defaultAmount = 'MONTH', 1
+
+        for k, v in window_dict.items():
+            window = k
+            amount = v
+
+        if window not in WINDOWS:
+            print('Window was not in allowed values so it will be counted for default: ',
+                  defaultWindow, defaultAmount)
+
+            window = defaultWindow
+
+        end = datetime.now()
+
+        if 'HOUR' == window:
+            start = end - timedelta(hours=amount)
+        elif 'DAY' == window:
+            start = end - timedelta(days=amount)
+        elif 'WEEK' == window:
+            start = end - timedelta(weeks=amount)
+        elif 'MONTH' == window:
+            start = end - timedelta(weeks=amount * 4)
+
+        return [str(start), str(end)]
 
     class Trader:
         poloniex_service: PoloniexPublicService
@@ -88,7 +133,7 @@ class Cycle:
         budget: float
         pairs: list
         risk: int
-        window: str
+        window: dict
         period: int
         steps: int
 
@@ -102,6 +147,7 @@ class Cycle:
                     as if it must happen.
                 Risk = 0% means that algorithm only counts on the closest predicted step
             - Window: window of data on that prediction will be made
+                Example: {'WEEK':2}
             - Period: periodicity of predicted data
             - Steps: amount of steps in future (periods) on that prediction will be made
             :param params: parameters as dictionary
