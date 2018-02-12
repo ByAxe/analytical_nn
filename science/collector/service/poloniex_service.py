@@ -183,9 +183,9 @@ class PoloniexPublicService:
         sql += ', '.join(fields) if fields is not None else "*"
         sql += " FROM poloniex.chart_data WHERE"
 
-        sql += " period = " + period + " AND" if period is not None else ""
-        sql += " date >= " + start + " AND" if start is not None else ""
-        sql += " date <= " + end + " AND" if end is not None else ""
+        sql += " period = " + str(period) + " AND" if str(period) is not None else ""
+        sql += " date >= " + str(start) + " AND" if str(start) is not None else ""
+        sql += " date <= " + str(end) + " AND" if str(end) is not None else ""
         sql += " main_currency = '" + mainCurrency + "'" + " AND" if mainCurrency is not None else ""
         sql += " secondary_currency = '" + secondaryCurrency + "'" + " AND" if secondaryCurrency is not None else ""
 

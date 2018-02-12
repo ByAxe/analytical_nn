@@ -1,3 +1,6 @@
+from science.collector.service.models import sarima
+
+
 class Model:
     data: dict
     futureSteps: int
@@ -14,5 +17,5 @@ class Model:
         """
         Choose an algorithm and make a prediction for given data
         """
-        # TODO implement
-        return {}
+        predictions = sarima.makePrediction(self.data, self.futureSteps)
+        return predictions

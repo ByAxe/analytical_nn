@@ -53,7 +53,8 @@ class Cycle:
 
         for pair in pairs:
             mainCurrency, secondaryCurrency = pair.split('_')
-            chartData = self.poloniex_service.loadChartData(mainCurrency, secondaryCurrency, start, end, period)
+            chartData = self.poloniex_service.getChartData(mainCurrency, secondaryCurrency, start, end, period,
+                                                           fields=['weighted_average'])
             data[pair] = chartData
 
         return data
