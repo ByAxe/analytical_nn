@@ -105,9 +105,9 @@ def getChartData():
     fields = request.args['fields'].split(',') if 'fields' in request.args else None
     limit = request.args['limit'] if 'limit' in request.args else None
 
-    result = poloniexPublicService.getChartData(main_currency, secondary_currency, start, end, period,
-                                                fields=fields,
-                                                limit=limit)
+    result = poloniexPublicService.getChartDataFromDB(main_currency, secondary_currency, start, end, period,
+                                                      fields=fields,
+                                                      limit=limit)
     return json_response(str(result))
 
 

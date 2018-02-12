@@ -176,8 +176,16 @@ class PoloniexPublicService:
         self.connection.commit()
         return len(chartData)
 
-    def getChartData(self, mainCurrency, secondaryCurrency, start, end, period, fields: list = None,
-                     limit='1000') -> list:
+    def getChartData(self, currencyPair, start, end, period):
+        chartData = poloniexApi.returnChartData(currencyPair, start, end, period)
+
+        if not chartData or len(chartData) < 2:
+            return len([])
+
+        return chartData
+
+    def getChartDataFromDB(self, mainCurrency, secondaryCurrency, start, end, period, fields: list = None,
+                           limit='1000') -> list:
         sql = "SELECT "
 
         sql += ', '.join(fields) if fields is not None else "*"
@@ -199,7 +207,7 @@ class PoloniexPublicService:
     def saveChartDataToCSV(self, main_currency, secondary_currency, start, end, period, file_name='dataset'):
         import pandas as pd
 
-        chartData = self.getChartData(main_currency, secondary_currency, start, end, period, limit=None)
+        chartData = self.getChartDataFromDB(main_currency, secondary_currency, start, end, period, limit=None)
 
         columns = ['main_currency', 'secondary_currency', 'date', 'period', 'high', 'low',
                    'open', 'close', 'volume', 'quote_volume', 'weighted_average']

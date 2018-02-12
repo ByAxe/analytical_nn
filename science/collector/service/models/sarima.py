@@ -12,7 +12,7 @@ def modifyChartData(chartData):
 
     # strange conversion for SARIMAX model correct input
     for o in chartData:
-        modifiedData.append(np.array([float(o[0])]))
+        modifiedData.append(np.array([o]))
 
     return modifiedData
 
@@ -28,7 +28,7 @@ def makePrediction(data: dict, futureSteps: int) -> dict:
     predictions = {}
 
     for pair, chartData in data.items():
-        prediction = list()
+        prediction = {}
 
         chartData = modifyChartData(chartData)
 
@@ -39,9 +39,9 @@ def makePrediction(data: dict, futureSteps: int) -> dict:
 
             output = model_fit.forecast()
             predicted_value = output[0]
-            prediction.append(predicted_value)
+            prediction[step + 1] = predicted_value
 
-            chartData.append(predicted_value)
+            chartData.append(np.array([predicted_value]))
 
         predictions[pair] = prediction
 
