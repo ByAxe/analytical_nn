@@ -16,14 +16,19 @@ class PoloniexPublicService:
         self.connection = connection
         self.cursor = cursor
 
+        # prepares the query for insert
+        self.cursor.execute(CURRENCIES_INSERT_PLAN_SQL)
+
+        # prepares the query for insert
+        self.cursor.execute(CHART_DATA_INSERT_PLAN_SQL)
+
+        self.connection.commit()
+
     def updateCurrencies(self):
         r = poloniexApi.returnCurrencies()
 
         # clear the table
         self.cursor.execute("DELETE FROM poloniex.currencies")
-
-        # prepares the query for insert
-        self.cursor.execute(CURRENCIES_INSERT_PLAN_SQL)
 
         sql = "EXECUTE currencies_insert_plan (%s, %s, %s, %s, %s, %s, %s, %s)"
 
@@ -76,9 +81,6 @@ class PoloniexPublicService:
         # to have actual list of currencies
         self.updateCurrencies()
         i = 0
-
-        # prepares the query for insert
-        self.cursor.execute(CHART_DATA_INSERT_PLAN_SQL)
 
         periods = self.specifyPeriod(period)
         mainPairs, secondaryPairs = self.specifyPairs(mainCurrency, secondaryCurrency)

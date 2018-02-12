@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 
-from science.collector.core.utils import WINDOWS
+from science.collector.core.utils import WINDOWS, datetimeToTimestamp
 from science.collector.service.models.model import Model
 from science.collector.service.poloniex_service import PoloniexPublicService
 
@@ -46,7 +46,7 @@ class Cycle:
         :param period: periodicity of data
         :return: The data from poloniex for specified params
         """
-        data: dict
+        data = {}
 
         # parse the window to get boundaries for selection
         start, end = self.parseWindow(window)
@@ -55,6 +55,7 @@ class Cycle:
             mainCurrency, secondaryCurrency = pair.split('_')
             chartData = self.poloniex_service.loadChartData(mainCurrency, secondaryCurrency, start, end, period)
             data[pair] = chartData
+
         return data
 
     def parseWindow(self, window_dict: dict):
@@ -88,7 +89,7 @@ class Cycle:
         elif 'MONTH' == window:
             start = end - timedelta(weeks=amount * 4)
 
-        return [str(start), str(end)]
+        return [datetimeToTimestamp(start), datetimeToTimestamp(end)]
 
     class Trader:
         poloniex_service: PoloniexPublicService
