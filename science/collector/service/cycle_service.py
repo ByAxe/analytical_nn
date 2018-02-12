@@ -29,7 +29,7 @@ class Cycle:
         predictions = model.predict()
 
         # pass prediction to Trader logic and get a prepared plan
-        trader = self.Trader(self.poloniex_service, params.budget, params.risk, predictions)
+        trader = self.Trader(self.poloniex_service, params.budget, params.risk, params.steps, params.pairs, predictions)
         plan = trader.preparePlan()
 
         # perform created plan
@@ -95,11 +95,15 @@ class Cycle:
         poloniex_service: PoloniexPublicService
         budget: float
         risk: int
+        steps: int
+        pairs: list
         predictions: dict
 
-        def __init__(self, poloniex_service, budget, risk, predictions):
+        def __init__(self, poloniex_service, budget, risk, steps, pairs, predictions):
             """
             :param predictions: from model that makes predictions
+            :param steps: amount of steps in future on that prediction made
+            :param pairs: all pair for that prediction made
             :param budget: allowed overall maximum (measured in USD) for all operations during the iteration
             :param risk: The number of steps that a trader will count on when building a plan,
             as what exactly should happen. Measured in %.
@@ -108,6 +112,8 @@ class Cycle:
             self.poloniex_service = poloniex_service
             self.budget = budget
             self.risk = risk
+            self.steps = steps
+            self.pairs = pairs
             self.predictions = predictions
 
         def preparePlan(self) -> dict:
@@ -119,7 +125,21 @@ class Cycle:
                 D) Current situation on market (on-line sells and buys)
             :return: prepared plan
             """
-            # TODO implement
+            # TODO get currency prices for all selected pairs
+
+            # TODO iterate though all pairs and obtain plan for each step
+            common_plan = {}
+            for step in range(1, self.steps + 1):
+                plan_for_step = {}
+                for pair, prediction in self.predictions.items():
+                    pass
+                pass
+
+            # TODO leave only top 3 operations for each step
+
+            # TODO Manage the risk for the steps
+
+            # TODO return resulting plan
             return {}
 
         def trade(self, plan: dict) -> dict:

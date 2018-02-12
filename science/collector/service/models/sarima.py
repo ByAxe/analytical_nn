@@ -22,7 +22,8 @@ def makePrediction(data: dict, futureSteps: int) -> dict:
     Make a prediction for incoming data on futureSteps
     :param data: dictionary of data where key = currencyPair and value = list of observations
     :param futureSteps: amount of steps on that algorithm will try to predict price
-    :return: dictionary of data where key = currencyPair and value = list of predictions (equal size to futureSteps variable)
+    :return: dictionary of data where key = currencyPair and
+        value = dict of predictions (equal size to futureSteps variable) where key=step_number value = prediction
     """
     P, D, Q, step = 1, 0, 2, 12
     predictions = {}
