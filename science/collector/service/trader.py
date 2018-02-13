@@ -1,5 +1,7 @@
 import math
 
+from science.collector.core.entities import Operation
+from science.collector.core.utils import ALL
 from science.collector.service.poloniex_service import PoloniexPublicService
 
 
@@ -7,11 +9,8 @@ class Trader:
     threshold = 0.000001
 
     poloniex_service: PoloniexPublicService
-    budget: float
-    risk: int
-    steps: int
-    pairs: list
-    predictions: dict
+    budget, risk, steps, pairs, predictions = 0.0, 0, 0, [], {}
+    ticker, balances, tradeHistory, orders = {}, {}, {}, {}
 
     def __init__(self, poloniex_service, budget, risk, steps, pairs, predictions):
         """
@@ -30,6 +29,18 @@ class Trader:
         self.pairs = pairs
         self.predictions = predictions
 
+        # get the current prices from poloniex
+        self.ticker = self.poloniex_service.returnTickerForPairs(self.pairs)
+
+        # What is currently on balance
+        self.balances = self.poloniex_service.returnBalances()
+
+        # Get trade history for account
+        self.tradeHistory = self.poloniex_service.returnTradeHistory(ALL)
+
+        # Return all open orders for account
+        self.orders = self.poloniex_service.returnOpenOrders(ALL)
+
     def preparePlan(self) -> list:
         """
         Prepares a plan, based on:
@@ -39,14 +50,6 @@ class Trader:
             D) Current situation on market (on-line sells and buys)
         :return: prepared plan
         """
-        # get the current prices from poloniex
-        ticker = self.poloniex_service.returnTickerForPairs(self.pairs)
-
-        # What is currently on balance
-        balances = self.poloniex_service.returnBalances()
-
-        # Get trade history for account
-        tradeHistory = self.poloniex_service.returnTradeHistory(ALL)
         common_plan = {}
 
         # iterate through all the pairs and predicted steps and find all appropriate operations to make
@@ -54,10 +57,10 @@ class Trader:
             plan_for_step = []
             for pair, prediction_list in self.predictions.items():
                 predicted_price = prediction_list[step]
-                current_price = ticker[pair]['lowerAsk']
+                current_price = self.ticker[pair]['lowerAsk']
 
                 delta = current_price - predicted_price
-                delta_common = self.to_common(delta, pair, ticker)
+                delta_common = self.to_common(delta, pair, self.ticker)
 
                 # If delta less than the stated threshold --> do nothing!
                 if math.fabs(delta_common) <= self.threshold:
@@ -65,15 +68,16 @@ class Trader:
                 # If delta less than 0 --> we must buy currency now
                 # Example: current = 2, predicted = 4, delta = -2, so we must buy it now for 2, to sell later for 4
                 elif delta_common < 0:
-                    plan_for_step.append(self.Operation('BUY', pair, delta_common, step))
+                    plan_for_step.append(Operation('BUY', pair, delta_common, step))
 
-                # TODO Find a price for that it was bought (returnTradeHistory from poloniex)
-                tradeHistoryForPair = tradeHistory[pair]
-                prices = self.calculate_prices(tradeHistoryForPair)
+                # Find a prices for that it was bought (returnTradeHistory from poloniex)
+                tradeHistoryForPair = self.tradeHistory[pair]
+                price = self.calculate_avg_price(tradeHistoryForPair)
 
-                # TODO Find an open orders for this currency pair (returnOpenOrders form poloniex)
+                # TODO Reopen orders with new price if
+                ordersForPair = self.orders[pair]
 
-                # TODO If it is lower than predicted value -> sell it
+                # TODO
 
             common_plan[step] = plan_for_step
 
@@ -127,7 +131,7 @@ class Trader:
         """
         return amount
 
-    def calculate_prices(self, tradeHistory: list) -> dict:
+    def calculate_avg_price(self, tradeHistory: list) -> dict:
         """
         Calculate all remainders for that currency was bought and collect it into dictionary
         :param tradeHistory: history of all transactions for particular currency pair
@@ -177,16 +181,7 @@ class Trader:
 
             previous_rate, remainder = rate, total
 
-        return result
+        # Calculate average price for remainders
+        average_price = sum(result.keys()) / float(len(result))
 
-    class Operation:
-        op_type: str
-        pair: str
-        delta: float
-        step: int
-
-        def __init__(self, op_type, pair, delta, step):
-            self.op_type = op_type
-            self.pair = pair
-            self.delta = delta
-            self.step = step
+        return average_price

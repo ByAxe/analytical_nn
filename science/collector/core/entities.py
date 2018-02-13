@@ -27,3 +27,16 @@ class Parameters:
         self.window = params['window']
         self.period = params['period']
         self.steps = params['steps']
+
+
+class Operation:
+    op_type: str
+    pair: str
+    delta: float
+    step: int
+
+    def __init__(self, op_type, pair, delta, step):
+        self.op_type = op_type
+        self.pair = pair
+        self.delta = delta
+        self.step = step

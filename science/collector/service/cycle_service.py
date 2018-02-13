@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 
-from science.collector.core.parameters import Parameters
+from science.collector.core.entities import Parameters
 from science.collector.core.utils import WINDOWS, datetimeToTimestamp
 from science.collector.service.models.model import Model
 from science.collector.service.poloniex_service import PoloniexPublicService

@@ -237,3 +237,6 @@ class PoloniexPublicService:
         start = end - timedelta(weeks=4)
         limit = 10000
         return poloniexApi.returnTradeHistory(currencyPair, start, end, limit)
+
+    def returnOpenOrders(self, currencyPair):
+        return poloniexApi.returnOpenOrders(currencyPair)
