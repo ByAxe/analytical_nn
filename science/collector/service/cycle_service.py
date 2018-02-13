@@ -149,34 +149,48 @@ class Cycle:
                     # If delta less than 0 --> we must buy currency now
                     # Example: current = 2, predicted = 4, delta = -2, so we must buy it now for 2, to sell later for 4
                     elif delta_common < 0:
-                        plan_for_step.append(self.Operation('BUY', pair, delta_common))
-                    # If delta more than 0 --> we must sell currency now
-                    # Example: current = 4, predicted = 2, delta = 2, so we must sell it now for 4, because it'll cost only 2 afterwards
-                    elif delta_common > 0:
-                        plan_for_step.append(self.Operation('SELL', pair, delta_common))
+                        plan_for_step.append(self.Operation('BUY', pair, delta_common, step))
+
+                    # TODO Account What We Have Now (returnBalances from poloniex)
+
+                    # TODO Find a price for what it was bought (returnTradeHistory from poloniex)
+
+                    # TODO Find an open orders for this currency pair (returnOpenOrders form poloniex)
+
+                    # TODO If it is lower than predicted value -> sell it
 
                 common_plan[step] = plan_for_step
 
             # top_n operations by profitability that must left for each step
-            top_n = 3
+            TOP_N = 3
 
             for step, plan in common_plan.items():
                 # sort by delta (profitability metrics)
-                plan.sort(key=lambda op: op.delta)
+                plan.sort(key=lambda op: op.delta, reverse=True)
 
                 # leave only top_n operations
-                common_plan[step] = plan[:top_n]
+                common_plan[step] = plan[:TOP_N]
 
             resulting_plan = []
 
-            # TODO Manage the risk for the steps
-            if self.steps > 1:
+            # Manage risk for the steps
+            if self.steps > 1 and self.risk > 0:
                 # in how many steps we believe as if it must happen
-                believe_in = round(self.steps * self.risk / 100)
+                _believe_in = round(self.steps * self.risk / 100)
+                believe_in = 1 if _believe_in == 0 else _believe_in
 
-            resulting_plan = common_plan[1]
+                # collect all operations from all believed steps into one list
+                for step, plan in common_plan.items():
+                    if step > believe_in:
+                        continue
+                    resulting_plan.extend(plan)
 
-            # TODO return resulting plan
+                # select only top_n of them by profitability
+                resulting_plan.sort(key=lambda op: op.delta, reverse=True)
+                resulting_plan = resulting_plan[:TOP_N]
+            else:
+                resulting_plan = common_plan[1]
+
             return resulting_plan
 
         def trade(self, plan: dict) -> dict:
@@ -201,11 +215,13 @@ class Cycle:
             op_type: str
             pair: str
             delta: float
+            step: int
 
-            def __init__(self, op_type, pair, delta):
+            def __init__(self, op_type, pair, delta, step):
                 self.op_type = op_type
                 self.pair = pair
                 self.delta = delta
+                self.step = step
 
     class Parameters:
         budget: float
