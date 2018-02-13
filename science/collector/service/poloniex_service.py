@@ -1,5 +1,5 @@
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from science.collector.core.utils import CHART_DATA_INSERT_PLAN_SQL, \
     CURRENCIES_INSERT_PLAN_SQL, PERIODS, ALL, MAX_DATA_IN_SINGLE_QUERY
@@ -218,7 +218,7 @@ class PoloniexPublicService:
 
         df.to_csv(file_name + '.csv')
 
-    def returnTickerForPairs(self, pairs: list):
+    def returnTickerForPairs(self, pairs: list) -> dict:
         """
         Filters ticker for only the needed pairs
         :param pairs: about that information is needed
@@ -228,3 +228,12 @@ class PoloniexPublicService:
         # filtered_d = dict((k, d[k]) for k in pairs if k in d)
         # return filtered_d
         return d
+
+    def returnBalances(self) -> dict:
+        return poloniexApi.returnBalances()
+
+    def returnTradeHistory(self, currencyPair) -> dict:
+        end = datetime.now()
+        start = end - timedelta(weeks=4)
+        limit = 10000
+        return poloniexApi.returnTradeHistory(currencyPair, start, end, limit)

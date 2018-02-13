@@ -1,7 +1,7 @@
 import math
 from datetime import datetime, timedelta
 
-from science.collector.core.utils import WINDOWS, datetimeToTimestamp
+from science.collector.core.utils import WINDOWS, datetimeToTimestamp, ALL
 from science.collector.service.models.model import Model
 from science.collector.service.poloniex_service import PoloniexPublicService
 
@@ -131,6 +131,11 @@ class Cycle:
             # get the current prices from poloniex
             ticker = self.poloniex_service.returnTickerForPairs(self.pairs)
 
+            # What is currently on balance
+            balances = self.poloniex_service.returnBalances()
+
+            # Get trade history for account
+            tradeHistory = self.poloniex_service.returnTradeHistory(ALL)
             common_plan = {}
 
             # iterate through all the pairs and predicted steps and find all appropriate operations to make
@@ -151,9 +156,9 @@ class Cycle:
                     elif delta_common < 0:
                         plan_for_step.append(self.Operation('BUY', pair, delta_common, step))
 
-                    # TODO Account What We Have Now (returnBalances from poloniex)
-
-                    # TODO Find a price for what it was bought (returnTradeHistory from poloniex)
+                    # TODO Find a price for that it was bought (returnTradeHistory from poloniex)
+                    tradeHistoryForPair = tradeHistory[pair]
+                    prices = self.calculate_prices(tradeHistoryForPair)
 
                     # TODO Find an open orders for this currency pair (returnOpenOrders form poloniex)
 
@@ -210,6 +215,58 @@ class Cycle:
             :return: the same amount converted to common currency
             """
             return amount
+
+        def calculate_prices(self, tradeHistory: list) -> dict:
+            """
+            Calculate all prices for that currency was bought and collect it into dictionary
+            :param tradeHistory: history of all transactions for particular currency pair
+            :return: {rate1: remainder1, rate2: remainder2, ...}
+            """
+            result = {}
+
+            # Sort them by relevance
+            tradeHistory.sort(key=lambda k: k['globalTradeID'])
+
+            total, previous_rate, remainder = 0, 0, 0
+            for record in tradeHistory:
+                _type, amount = record['type'], float(record['amount'])
+                # Fee doesn't included in 'total' so we must add fee and then divide by amount to get fair rate
+                rate = (float(record['total']) + float(record['fee'])) / amount
+
+                if _type == 'buy':
+                    # If total > than 0 it means that we made a BUY while still have some
+                    # So we have to account the price and left amount of previously bought currency
+                    if total > 0:
+                        result[previous_rate] = remainder
+
+                    total += amount
+                elif _type == 'sell':
+                    total -= amount
+
+                    # If total < than 0 it means that we also sold a previously bought currency
+                    if total < 0:
+                        # so we have to iterate though all our remainders and remove them one by one
+                        # until our total is equal to 0
+                        on_del = []
+                        for _rate, _remainder in result.items():
+                            # if we sold more than we have in this remainder just add it to total and remove element from results
+                            if math.fabs(total) >= _remainder:
+                                total += _remainder
+                                on_del.append(_rate)
+                            # If our total becomes less than current remainder
+                            # just subtract it from the remainder and set zero to total
+                            else:
+                                result[_rate] += total
+                                total = 0
+                                break
+
+                        # remove all completed remainders from results
+                        for _del in on_del:
+                            del result[_del]
+
+                previous_rate, remainder = rate, total
+
+            return result
 
         class Operation:
             op_type: str
