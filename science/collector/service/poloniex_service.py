@@ -217,3 +217,14 @@ class PoloniexPublicService:
         df['date'] = df['date'].apply(lambda d: datetime.fromtimestamp(d).strftime('%Y-%m-%d %H:%M:%S'))
 
         df.to_csv(file_name + '.csv')
+
+    def returnTickerForPairs(self, pairs: list):
+        """
+        Filters ticker for only the needed pairs
+        :param pairs: about that information is needed
+        :return: filtered data for needed pairs
+        """
+        d = poloniexApi.returnTicker()
+        # filtered_d = dict((k, d[k]) for k in pairs if k in d)
+        # return filtered_d
+        return d
