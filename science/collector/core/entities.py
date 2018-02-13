@@ -36,6 +36,13 @@ class Operation:
     step: int
 
     def __init__(self, op_type, pair, delta, step):
+        """
+        TODO add docs
+        :param op_type:
+        :param pair:
+        :param delta:
+        :param step:
+        """
         self.op_type = op_type
         self.pair = pair
         self.delta = delta

@@ -6,7 +6,7 @@ from science.collector.service.poloniex_service import PoloniexPublicService
 
 
 class Trader:
-    threshold = 0.000001
+    THRESHOLD = 0.000001
 
     poloniex_service: PoloniexPublicService
     budget, risk, steps, pairs, predictions = 0.0, 0, 0, [], {}
@@ -59,25 +59,28 @@ class Trader:
                 predicted_price = prediction_list[step]
                 current_price = self.ticker[pair]['lowerAsk']
 
-                delta = current_price - predicted_price
-                delta_common = self.to_common(delta, pair, self.ticker)
+                _current_delta = current_price - predicted_price
+                current_delta = self.to_common_currency(_current_delta, pair)
 
                 # If delta less than the stated threshold --> do nothing!
-                if math.fabs(delta_common) <= self.threshold:
+                if math.fabs(current_delta) <= self.THRESHOLD:
                     continue
                 # If delta less than 0 --> we must buy currency now
                 # Example: current = 2, predicted = 4, delta = -2, so we must buy it now for 2, to sell later for 4
-                elif delta_common < 0:
-                    plan_for_step.append(Operation('BUY', pair, delta_common, step))
+                elif current_delta < 0:
+                    plan_for_step.append(Operation('BUY', pair, current_delta, step))
 
-                # Find a prices for that it was bought (returnTradeHistory from poloniex)
-                tradeHistoryForPair = self.tradeHistory[pair]
-                price = self.calculate_avg_price(tradeHistoryForPair)
+                # Find an average price for that this currency was bought
+                tradeHistoryForPair: list = self.tradeHistory[pair]
 
-                # TODO Reopen orders with new price if
-                ordersForPair = self.orders[pair]
+                # TODO define when we should do this calculation based on trading history AND balances
+                if tradeHistoryForPair:
+                    bought_for = self.calculate_avg_price(tradeHistoryForPair)
 
-                # TODO
+                    # TODO Reopen orders with new price
+                    openOrdersForPair = self.orders[pair]
+
+                    # TODO calculate when it should be sold relying on price we have bought it for previously
 
             common_plan[step] = plan_for_step
 
@@ -121,14 +124,14 @@ class Trader:
         # TODO implement
         return {}
 
-    def to_common(self, amount, pair, ticker):
+    def to_common_currency(self, amount, pair):
         """
         Converts amount to some common currency
         :param amount:
         :param pair: currency pair
-        :param ticker: list of all pairs and its current prices
         :return: the same amount converted to common currency
         """
+        # TODO implement to get a possibility to trade with respect to a few main currencies
         return amount
 
     def calculate_avg_price(self, tradeHistory: list) -> dict:
@@ -137,7 +140,7 @@ class Trader:
         :param tradeHistory: history of all transactions for particular currency pair
         :return: {rate1: remainder1, rate2: remainder2, ...}
         """
-        result = {}
+        remainders_dict = {}
 
         # Sort them by relevance
         tradeHistory.sort(key=lambda k: k['globalTradeID'])
@@ -150,9 +153,9 @@ class Trader:
 
             if _type == 'buy':
                 # If total > than 0 it means that we made a BUY while still have some
-                # So we have to account the price and left amount of previously bought currency
+                # So we have to account the price and remainder of previously bought currency
                 if total > 0:
-                    result[previous_rate] = remainder
+                    remainders_dict[previous_rate] = remainder
 
                 total += amount
             elif _type == 'sell':
@@ -163,7 +166,7 @@ class Trader:
                     # so we have to iterate though all our remainders and remove them one by one
                     # until our total is equal to 0
                     on_del = []
-                    for _rate, _remainder in result.items():
+                    for _rate, _remainder in remainders_dict.items():
                         # if we sold more than we have in this remainder just add it to total and remove element from results
                         if math.fabs(total) >= _remainder:
                             total += _remainder
@@ -171,17 +174,17 @@ class Trader:
                         # If our total becomes less than current remainder
                         # just subtract it from the remainder and set zero to total
                         else:
-                            result[_rate] += total
+                            remainders_dict[_rate] += total
                             total = 0
                             break
 
-                    # remove all completed remainders from results
+                    # remove all closed remainders
                     for _del in on_del:
-                        del result[_del]
+                        del remainders_dict[_del]
 
             previous_rate, remainder = rate, total
 
         # Calculate average price for remainders
-        average_price = sum(result.keys()) / float(len(result))
+        average_price = sum(remainders_dict.keys()) / float(len(remainders_dict))
 
         return average_price
