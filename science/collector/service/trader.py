@@ -1,5 +1,3 @@
-import math
-
 from science.collector.core.entities import Operation
 from science.collector.core.utils import ALL
 from science.collector.service.poloniex_service import PoloniexPublicService
@@ -71,17 +69,15 @@ class Trader:
                 current_price = self.ticker[pair][self.current_price_from]
 
                 # get delta between current
-                current_delta = self.get_delta(current_price, predicted_price, pair)
+                profit = self.get_delta(two=current_price, one=predicted_price, pair=pair)
 
-                # If delta less than the stated threshold --> do nothing!
-                if math.fabs(current_delta) <= self.THRESHOLD:
+                # If profit more than threshold and 0 --> we must buy currency now
+                # Example: current = 2, predicted = 4, profit = 2, so we must buy it now for 2, to sell later for 4
+                if profit > 0 and profit > self.THRESHOLD:
+                    plan_for_step.append(Operation('BUY', pair, profit, step))
                     continue
-                # If delta less than 0 --> we must buy currency now
-                # Example: current = 2, predicted = 4, delta = -2, so we must buy it now for 2, to sell later for 4
-                elif current_delta < 0:
-                    plan_for_step.append(Operation('BUY', pair, current_delta, step))
 
-                # Find an average price for that this currency was bought
+                # Find an average price for this currency was bought
                 tradeHistoryForPair: list = self.tradeHistory[pair]
 
                 main_balance = float(self.balances[main_currency])
@@ -91,11 +87,12 @@ class Trader:
                 if secondary_balance > 0.0:
                     bought_for = self.calculate_avg_price(tradeHistoryForPair, secondary_balance)
 
-                    # TODO calculate when it should be sold relying on price we have bought it for previously
-                    bought_delta = self.get_delta(bought_for, predicted_price, pair)
+                    # calculate profit of selling it now relying on price we have bought it for previously
+                    profit = self.get_delta(two=bought_for, one=predicted_price, pair=pair)
 
-                    # TODO Reopen orders with new price
-                    openOrdersForPair = self.orders[pair]
+                    # If profit more than threshold and 0 --> we must sell currency now
+                    if profit > 0 and profit > self.THRESHOLD:
+                        plan_for_step.append(Operation('SELL', pair, profit, step))
 
             common_plan[step] = plan_for_step
 
@@ -195,9 +192,9 @@ class Trader:
         """
         return delta - (delta * self.fee) / 100
 
-    def get_delta(self, current_price, predicted_price, pair):
+    def get_delta(self, one, two, pair):
         # simple difference between two numbers
-        __current_delta = current_price - predicted_price
+        __current_delta = one - two
 
         # minus fee
         _current_delta = self.minus_fee(__current_delta)
