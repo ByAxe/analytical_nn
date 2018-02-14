@@ -65,6 +65,8 @@ class Trader:
         for step in range(1, self.steps + 1):
             plan_for_step = []
             for pair, prediction_list in self.predictions.items():
+                main_currency, secondary_currency = pair.split('_')
+
                 predicted_price = prediction_list[step]
                 current_price = self.ticker[pair][self.current_price_from]
 
@@ -82,9 +84,12 @@ class Trader:
                 # Find an average price for that this currency was bought
                 tradeHistoryForPair: list = self.tradeHistory[pair]
 
-                # if we already done anything with this currency and have it in on balance
-                if tradeHistoryForPair:
-                    bought_for = self.calculate_avg_price(tradeHistoryForPair)
+                main_balance = float(self.balances[main_currency])
+                secondary_balance = float(self.balances[secondary_currency])
+
+                # if we already have on balance this currency so we must investigate the price for what it was bought
+                if secondary_balance > 0.0:
+                    bought_for = self.calculate_avg_price(tradeHistoryForPair, secondary_balance)
 
                     # TODO calculate when it should be sold relying on price we have bought it for previously
                     bought_delta = self.get_delta(bought_for, predicted_price, pair)
@@ -141,60 +146,46 @@ class Trader:
         # TODO implement to get a possibility to trade with respect to a few main currencies
         return amount
 
-    def calculate_avg_price(self, tradeHistory: list) -> float:
+    def calculate_avg_price(self, tradeHistory: list, balance: float) -> float:
         """
         Calculate all remainders for that currency was bought and collect it into dictionary
+        :param balance: current balance for the right currency
         :param tradeHistory: history of all transactions for particular currency pair
-        :return: {rate1: remainder1, rate2: remainder2, ...}
+        :return: avg price from all remainders
         """
         remainders_dict = {}
 
         # Sort them by relevance
-        tradeHistory.sort(key=lambda k: k['globalTradeID'])
-
-        total, previous_rate, remainder = 0, 0, 0
+        tradeHistory.sort(key=lambda k: k['globalTradeID'], reverse=True)
+        _balance = balance
         for record in tradeHistory:
-            _type, amount = record['type'], float(record['amount'])
+            _type, amount, operation_total, fee = record['type'], float(record['amount']), float(record['total']), \
+                                                  float(record['fee'])
+
+            # if it is not buy operation -> we do not interested in it
+            # because we need to find out for what price we have bought the amount of this currency, that we have now
+            if _type != 'buy':
+                continue
+
             # Fee doesn't included in 'total' so we must add fee and then divide by amount to get fair rate
-            rate = (float(record['total']) + float(record['fee'])) / amount
+            rate = (operation_total + fee) / amount
 
-            if _type == 'buy':
-                # If total > than 0 it means that we made a BUY while still have some
-                # So we have to account the price and remainder of previously bought currency
-                if total > 0:
-                    remainders_dict[previous_rate] = remainder
+            # If current operation does not explain why do we have so many coins on balance...
+            if _balance > operation_total:
+                # add this amount with this rate into our dictionary
+                remainders_dict[rate] = operation_total
 
-                total += amount
-            elif _type == 'sell':
-                total -= amount
+                # and subtract it from balance
+                _balance -= operation_total
 
-                # If total < than 0 it means that we also sold a previously bought currency
-                if total < 0:
-                    # so we have to iterate though all our remainders and remove them one by one
-                    # until our total is equal to 0
-                    on_del = []
-                    for _rate, _remainder in remainders_dict.items():
-                        # if we sold more than we have in this remainder just add it to total and remove element from results
-                        if math.fabs(total) >= _remainder:
-                            total += _remainder
-                            on_del.append(_rate)
-                        # If our total becomes less than current remainder
-                        # just subtract it from the remainder and set zero to total
-                        else:
-                            remainders_dict[_rate] += total
-                            total = 0
-                            break
+            # or - if total of current operation >= than balance, just return current rate as average price for left coins
+            else:
+                return rate
 
-                    # remove all closed remainders
-                    for _del in on_del:
-                        del remainders_dict[_del]
+            # Calculate average price for remainders
+            average_price = sum(remainders_dict.keys()) / float(len(remainders_dict))
 
-            previous_rate, remainder = rate, total
-
-        # Calculate average price for remainders
-        average_price = sum(remainders_dict.keys()) / float(len(remainders_dict))
-
-        return average_price
+            return average_price
 
     def minus_fee(self, delta):
         """
