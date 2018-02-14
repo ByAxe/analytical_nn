@@ -240,3 +240,12 @@ class PoloniexPublicService:
 
     def returnOpenOrders(self, currencyPair):
         return poloniexApi.returnOpenOrders(currencyPair)
+
+    def returnFeeInfo(self) -> dict:
+        return poloniexApi.returnFeeInfo()
+
+    def buy(self, currencyPair, rate, amount, fillOrKill=0, immediateOrCancel=0, postOnly=0):
+        return poloniexApi.buy(currencyPair, rate, amount, fillOrKill, immediateOrCancel, postOnly)
+
+    def sell(self, currencyPair, rate, amount, fillOrKill=0, immediateOrCancel=0, postOnly=0):
+        return poloniexApi.buy(currencyPair, rate, amount, fillOrKill, immediateOrCancel, postOnly)

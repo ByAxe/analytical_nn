@@ -127,17 +127,31 @@ class Poloniex:
         return self.api_query('returnTradeHistory',
                               {"currencyPair": currencyPair, "start": start, "end": end, "limit": limit})
 
+    def returnFeeInfo(self):
+        """
+        If you are enrolled in the maker-taker fee schedule, returns your current trading fees
+        and trailing 30-day volume in BTC. This information is updated once every 24 hours.
+        Example:
+        {"makerFee": "0.00140000", "takerFee": "0.00240000", "thirtyDayVolume": "612.00248891", "nextTier": "1200.00000000"}
+        :return: your current trading fees
+        """
+        return self.api_query('returnFeeInfo')
+
     # Places a buy order in a given market. Required POST parameters are "currencyPair", "rate", and "amount". If
     # successful, the method will return the order number. Inputs: currencyPair  The current pair rate          price
     #  the order is buying at amount        Amount of coins to buy Outputs: orderNumber   The order number
-    def buy(self, currencyPair, rate, amount):
-        return self.api_query('buy', {"currencyPair": currencyPair, "rate": rate, "amount": amount})
+    def buy(self, currencyPair, rate, amount, fillOrKill=0, immediateOrCancel=0, postOnly=0):
+        return self.api_query('buy', {"currencyPair": currencyPair, "rate": rate, "amount": amount,
+                                      "fillOrKill": fillOrKill, "immediateOrCancel": immediateOrCancel,
+                                      'postOnly': postOnly})
 
     # Places a sell order in a given market. Required POST parameters are "currencyPair", "rate", and "amount". If
     # successful, the method will return the order number. Inputs: currencyPair  The current pair rate          price
     #  the order is selling at amount        Amount of coins to sell Outputs: orderNumber   The order number
-    def sell(self, currencyPair, rate, amount):
-        return self.api_query('sell', {"currencyPair": currencyPair, "rate": rate, "amount": amount})
+    def sell(self, currencyPair, rate, amount, fillOrKill=0, immediateOrCancel=0, postOnly=0):
+        return self.api_query('sell', {"currencyPair": currencyPair, "rate": rate, "amount": amount,
+                                       "fillOrKill": fillOrKill, "immediateOrCancel": immediateOrCancel,
+                                       'postOnly': postOnly})
 
     # Cancels an order you have placed in a given market. Required POST parameters are "currencyPair" and "orderNumber".
     # Inputs:

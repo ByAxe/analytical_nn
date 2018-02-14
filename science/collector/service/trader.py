@@ -5,18 +5,18 @@ from science.collector.service.poloniex_service import PoloniexPublicService
 
 class Trader:
     poloniex_service: PoloniexPublicService
-    budget, fee, top_n, risk, steps, pairs, predictions, common_currency, THRESHOLD = 0.0, 0.0, 0, 0, 0, [], {}, '', 0
-    ticker, balances, tradeHistory, orders, current_price = {}, {}, {}, {}, ''
+    budget, top_n, risk, steps, pairs, predictions, common_currency, THRESHOLD = 0.0, 0, 0, 0, [], {}, '', 0
+    ticker, balances, tradeHistory, orders, current_price, takerFee, makerFee, = {}, {}, {}, {}, '', 0.0, 0.0
 
-    def __init__(self, poloniex_service, budget, steps, pairs, predictions, risk=0, fee=0.25, top_n=3,
-                 common_currency='BTC', THRESHOLD=0.000001, current_price_from='lowerAsk'):
+    def __init__(self, poloniex_service, budget, steps, pairs, predictions, risk=0, top_n=3,
+                 common_currency='BTC', THRESHOLD=0.000001, current_price_from='lowerAsk', reopen=False):
         """
         :param predictions: from model that makes predictions
+        :param reopen: whether we must reopen all previously opened orders with new iteration if the currency coincide
         :param current_price_from: the field from ticker to rely on while calculating profitability between current price and predicted one
         :param THRESHOLD: the baseline of profitability to perform any operation
         :param common_currency: what is the common currency
         :param top_n: how many of most profitable operations to apply
-        :param fee: percentage of fee from operation
         :param pairs: all pair for that prediction made
         :param steps: amount of steps in future on that prediction made
         :param risk: The number of steps that a trader will count on when building a plan,
@@ -24,12 +24,12 @@ class Trader:
         as what exactly should happen. Measured in %.
         :param poloniex_service: wrapper for interaction with poloniex api
         """
+        self.reopen = reopen
         self.poloniex_service = poloniex_service
         self.budget = budget
         self.risk = 100 if risk > 100 else 0 if risk < 0 else risk
         self.steps = steps
         self.pairs = pairs
-        self.fee = fee
         self.top_n = top_n
         self.common_currency = common_currency
         self.THRESHOLD = THRESHOLD
@@ -47,6 +47,10 @@ class Trader:
 
         # Return all open orders for account
         self.orders = self.poloniex_service.returnOpenOrders(ALL)
+
+        # Obtain current fees for operations from market
+        fees = self.poloniex_service.returnFeeInfo()
+        self.makerFee, self.takerFee = fees['makerFee'], fees['takerFee']
 
     def preparePlan(self) -> list:
         """
@@ -69,12 +73,12 @@ class Trader:
                 current_price = self.ticker[pair][self.current_price_from]
 
                 # get delta between current
-                profit = self.get_delta(two=current_price, one=predicted_price, pair=pair)
+                buy_profit = self.get_delta(two=current_price, one=predicted_price, pair=pair, op_type='BUY')
 
                 # If profit more than threshold and 0 --> we must buy currency now
                 # Example: current = 2, predicted = 4, profit = 2, so we must buy it now for 2, to sell later for 4
-                if profit > 0 and profit > self.THRESHOLD:
-                    plan_for_step.append(Operation('BUY', pair, profit, step))
+                if buy_profit > 0 and buy_profit > self.THRESHOLD:
+                    plan_for_step.append(Operation('BUY', pair, buy_profit, step))
                     continue
 
                 # Find an average price for this currency was bought
@@ -88,11 +92,11 @@ class Trader:
                     bought_for = self.calculate_avg_price(tradeHistoryForPair, secondary_balance)
 
                     # calculate profit of selling it now relying on price we have bought it for previously
-                    profit = self.get_delta(two=bought_for, one=predicted_price, pair=pair)
+                    sell_profit = self.get_delta(two=bought_for, one=predicted_price, pair=pair, op_type='SELL')
 
                     # If profit more than threshold and 0 --> we must sell currency now
-                    if profit > 0 and profit > self.THRESHOLD:
-                        plan_for_step.append(Operation('SELL', pair, profit, step))
+                    if sell_profit > 0 and sell_profit > self.THRESHOLD:
+                        plan_for_step.append(Operation('SELL', pair, sell_profit, step))
 
             common_plan[step] = plan_for_step
 
@@ -125,13 +129,31 @@ class Trader:
 
         return resulting_plan
 
-    def trade(self, plan: list) -> dict:
+    def trade(self, plan: list) -> list:
         """
         Performs an operations if needed based on previously prepared plan
         :return: performed operations
         """
-        # TODO implement
-        return {}
+        performed_operations = []
+
+        for operation in plan:
+
+            if self.reopen:
+                # TODO if there is an open orders for the currencies we have planned to buy or sell
+                # TODO change the opened price for open orders on that we have predicted in our
+                pass
+
+            is_performed = False
+
+            if operation.op_type == 'BUY':
+                is_performed = self.buy(operation)
+            elif operation.op_type == 'SELL':
+                is_performed = self.sell(operation)
+
+            if is_performed:
+                performed_operations.append(operation)
+
+        return performed_operations
 
     def to_common_currency(self, amount, pair):
         """
@@ -184,21 +206,30 @@ class Trader:
 
             return average_price
 
-    def minus_fee(self, delta):
+    def minus_fee(self, delta, op_type):
         """
         Subtracts fee from delta
         :param delta: basic difference
         :return: difference minus fee for operation
         """
-        return delta - (delta * self.fee) / 100
+        fee = self.takerFee if op_type == 'BUY' else self.makerFee
+        return delta - (delta * fee) / 100
 
-    def get_delta(self, one, two, pair):
+    def get_delta(self, one, two, pair, op_type):
         # simple difference between two numbers
         __current_delta = one - two
 
         # minus fee
-        _current_delta = self.minus_fee(__current_delta)
+        _current_delta = self.minus_fee(__current_delta, op_type)
 
         # convert to common currency
         current_delta = self.to_common_currency(_current_delta, pair)
         return current_delta
+
+    def buy(self, operation: Operation) -> bool:
+
+        return False
+
+    def sell(self, operation: Operation) -> bool:
+
+        return False

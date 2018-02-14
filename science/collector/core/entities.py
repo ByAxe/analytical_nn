@@ -5,12 +5,12 @@ class Parameters:
     window: dict
     period: int
     steps: int
-    fee: float
     top_n: int
     common_currency: str
     THRESHOLD: float
     current_price_from: str
     learn_on: str
+    reopen: bool
 
     def __init__(self, params):
         """
@@ -25,7 +25,6 @@ class Parameters:
             Example: {'WEEK':2}
         - Period: periodicity of predicted data
         - Steps: amount of steps in future (periods) on that prediction will be made
-        - Fee: percentage of fee from operation
         - top_n: how many of most profitable operations to apply
         - common_currency: what is the common currency for accounting profitability
         - THRESHOLD: the baseline of profitability to perform any operation
@@ -39,12 +38,12 @@ class Parameters:
         self.window = params['window']
         self.period = params['period']
         self.steps = params['steps']
-        self.fee = params['fee']
         self.top_n = params['top_n']
         self.common_currency = params['common_currency']
         self.THRESHOLD = params['THRESHOLD']
         self.current_price_from = params['current_price']
         self.learn_on = params['learn_on']
+        self.reopen = params['reopen']
 
 
 class Operation:

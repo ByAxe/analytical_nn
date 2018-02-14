@@ -16,7 +16,7 @@ class Cycle:
         """
         self.poloniex_service = poloniex_service
 
-    def startCycleIteration(self, params_dict: dict) -> dict:
+    def startCycleIteration(self, params_dict: dict) -> list:
         """
         Makes an iteration of a trading cycle
         :return: performed operations as dictionary
@@ -32,9 +32,9 @@ class Cycle:
 
         # pass prediction to Trader logic and get a prepared plan
         trader = Trader(poloniex_service=self.poloniex_service, budget=params.budget, risk=params.risk,
-                        steps=params.steps, pairs=params.pairs, predictions=predictions, fee=params.fee,
+                        steps=params.steps, pairs=params.pairs, predictions=predictions,
                         top_n=params.top_n, common_currency=params.common_currency, THRESHOLD=params.THRESHOLD,
-                        current_price_from=params.current_price_from)
+                        current_price_from=params.current_price_from, reopen=params.reopen)
 
         plan = trader.preparePlan()
 
