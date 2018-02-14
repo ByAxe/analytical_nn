@@ -9,7 +9,8 @@ class Parameters:
     top_n: int
     common_currency: str
     THRESHOLD: float
-    current_price: str
+    current_price_from: str
+    learn_on: str
 
     def __init__(self, params):
         """
@@ -28,7 +29,8 @@ class Parameters:
         - top_n: how many of most profitable operations to apply
         - common_currency: what is the common currency for accounting profitability
         - THRESHOLD: the baseline of profitability to perform any operation
-        - current_price: the field from ticker to rely on while calculating profitability between current price and predicted one
+        - current_price_from: the field from ticker to rely on while calculating profitability between current price and predicted one
+        - learn_on: the column from chartData from poloniex on that to learn on our prediction algorithm
         :param params: parameters as dictionary
         """
         self.budget = params['budget']
@@ -41,7 +43,8 @@ class Parameters:
         self.top_n = params['top_n']
         self.common_currency = params['common_currency']
         self.THRESHOLD = params['THRESHOLD']
-        self.current_price = params['current_price']
+        self.current_price_from = params['current_price']
+        self.learn_on = params['learn_on']
 
 
 class Operation:

@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 
 from science.collector.core.entities import Parameters
-from science.collector.core.utils import WINDOWS, datetimeToTimestamp
+from science.collector.core.utils import datetimeToTimestamp
 from science.collector.service.models.model import Model
 from science.collector.service.poloniex_service import PoloniexPublicService
 from science.collector.service.trader import Trader
@@ -24,7 +24,7 @@ class Cycle:
         # take all the params those were passed into method and wraps in up into Object
         params = Parameters(params_dict)
         # get all the data from Poloniex
-        data = self.getAllDataForParams(params.pairs, params.window, params.period)
+        data = self.getAllDataForParams(params.pairs, params.window, params.period, params.learn_on)
 
         # load data into Model and get prediction
         model = Model(data, params.steps)
@@ -34,7 +34,7 @@ class Cycle:
         trader = Trader(poloniex_service=self.poloniex_service, budget=params.budget, risk=params.risk,
                         steps=params.steps, pairs=params.pairs, predictions=predictions, fee=params.fee,
                         top_n=params.top_n, common_currency=params.common_currency, THRESHOLD=params.THRESHOLD,
-                        current_price=params.current_price)
+                        current_price_from=params.current_price_from)
 
         plan = trader.preparePlan()
 
@@ -44,12 +44,13 @@ class Cycle:
         # return performed operations
         return operations
 
-    def getAllDataForParams(self, pairs: list, window: dict, period: int) -> dict:
+    def getAllDataForParams(self, pairs: list, window: dict, period: int, learn_on: str = 'weightedAverage') -> dict:
         """
         Wraps up all logic for getting data from poloniex
         :param pairs: list of pairs
         :param window: window of data on that prediction will be made
         :param period: periodicity of data
+        :param learn_on: the column with price from poloniex on that to learn on our prediction algorithm
         :return: The data from poloniex for specified params
         """
         data = {}
@@ -60,29 +61,25 @@ class Cycle:
         for pair in pairs:
             chartData = self.poloniex_service.getChartData(pair, start, end, period)
 
-            data[pair] = [observation['weightedAverage'] for observation in chartData]
+            data[pair] = [observation[learn_on] for observation in chartData]
 
         return data
 
-    def parseWindow(self, window_dict: dict):
+    def parseWindow(self, window_dict=None):
         """
         Parse the window into boundaries (start, end)
         :param window_dict of data on that prediction will be made
                 Example: {'WEEK':2}
         :return: two bounds for selection
         """
+        if window_dict is None:
+            window_dict = {'MONTH': 1}
+
         start, end, window, amount = None, None, None, None
-        defaultWindow, defaultAmount = 'MONTH', 1
 
         for k, v in window_dict.items():
             window = k
             amount = v
-
-        if window not in WINDOWS:
-            print('Window was not in allowed values so it will be counted for default: ',
-                  defaultWindow, defaultAmount)
-
-            window = defaultWindow
 
         end = datetime.now()
 

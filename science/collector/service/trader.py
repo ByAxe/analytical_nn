@@ -11,10 +11,10 @@ class Trader:
     ticker, balances, tradeHistory, orders, current_price = {}, {}, {}, {}, ''
 
     def __init__(self, poloniex_service, budget, steps, pairs, predictions, risk=0, fee=0.25, top_n=3,
-                 common_currency='BTC', THRESHOLD=0.000001, current_price='lowerAsk'):
+                 common_currency='BTC', THRESHOLD=0.000001, current_price_from='lowerAsk'):
         """
         :param predictions: from model that makes predictions
-        :param current_price: the field from ticker to rely on while calculating profitability between current price and predicted one
+        :param current_price_from: the field from ticker to rely on while calculating profitability between current price and predicted one
         :param THRESHOLD: the baseline of profitability to perform any operation
         :param common_currency: what is the common currency
         :param top_n: how many of most profitable operations to apply
@@ -35,7 +35,7 @@ class Trader:
         self.top_n = top_n
         self.common_currency = common_currency
         self.THRESHOLD = THRESHOLD
-        self.current_price = current_price
+        self.current_price_from = current_price_from
         self.predictions = predictions
 
         # get the current prices from poloniex
@@ -66,11 +66,10 @@ class Trader:
             plan_for_step = []
             for pair, prediction_list in self.predictions.items():
                 predicted_price = prediction_list[step]
-                current_price = self.ticker[pair][self.current_price]
+                current_price = self.ticker[pair][self.current_price_from]
 
-                _current_delta = current_price - predicted_price
-                _current_delta = self.minus_fee(_current_delta)
-                current_delta = self.to_common_currency(_current_delta, pair)
+                # get delta between current
+                current_delta = self.get_delta(current_price, predicted_price, pair)
 
                 # If delta less than the stated threshold --> do nothing!
                 if math.fabs(current_delta) <= self.THRESHOLD:
@@ -83,14 +82,15 @@ class Trader:
                 # Find an average price for that this currency was bought
                 tradeHistoryForPair: list = self.tradeHistory[pair]
 
-                # TODO define when we should do this calculation based on trading history AND balances
+                # if we already done anything with this currency and have it in on balance
                 if tradeHistoryForPair:
                     bought_for = self.calculate_avg_price(tradeHistoryForPair)
 
+                    # TODO calculate when it should be sold relying on price we have bought it for previously
+                    bought_delta = self.get_delta(bought_for, predicted_price, pair)
+
                     # TODO Reopen orders with new price
                     openOrdersForPair = self.orders[pair]
-
-                    # TODO calculate when it should be sold relying on price we have bought it for previously
 
             common_plan[step] = plan_for_step
 
@@ -141,7 +141,7 @@ class Trader:
         # TODO implement to get a possibility to trade with respect to a few main currencies
         return amount
 
-    def calculate_avg_price(self, tradeHistory: list) -> dict:
+    def calculate_avg_price(self, tradeHistory: list) -> float:
         """
         Calculate all remainders for that currency was bought and collect it into dictionary
         :param tradeHistory: history of all transactions for particular currency pair
@@ -203,3 +203,14 @@ class Trader:
         :return: difference minus fee for operation
         """
         return delta - (delta * self.fee) / 100
+
+    def get_delta(self, current_price, predicted_price, pair):
+        # simple difference between two numbers
+        __current_delta = current_price - predicted_price
+
+        # minus fee
+        _current_delta = self.minus_fee(__current_delta)
+
+        # convert to common currency
+        current_delta = self.to_common_currency(_current_delta, pair)
+        return current_delta
