@@ -6,15 +6,19 @@ from science.collector.service.poloniex_service import PoloniexPublicService
 
 
 class Trader:
-    THRESHOLD = 0.000001
-
     poloniex_service: PoloniexPublicService
-    budget, risk, steps, pairs, predictions = 0.0, 0, 0, [], {}
-    ticker, balances, tradeHistory, orders = {}, {}, {}, {}
+    budget, fee, top_n, risk, steps, pairs, predictions, common_currency, THRESHOLD = 0.0, 0.0, 0, 0, 0, [], {}, '', 0
+    ticker, balances, tradeHistory, orders, current_price = {}, {}, {}, {}, ''
 
-    def __init__(self, poloniex_service, budget, risk, steps, pairs, predictions):
+    def __init__(self, poloniex_service, budget, steps, pairs, predictions, risk=0, fee=0.25, top_n=3,
+                 common_currency='BTC', THRESHOLD=0.000001, current_price='lowerAsk'):
         """
         :param predictions: from model that makes predictions
+        :param current_price: the field from ticker to rely on while calculating profitability between current price and predicted one
+        :param THRESHOLD: the baseline of profitability to perform any operation
+        :param common_currency: what is the common currency
+        :param top_n: how many of most profitable operations to apply
+        :param fee: percentage of fee from operation
         :param pairs: all pair for that prediction made
         :param steps: amount of steps in future on that prediction made
         :param risk: The number of steps that a trader will count on when building a plan,
@@ -27,6 +31,11 @@ class Trader:
         self.risk = 100 if risk > 100 else 0 if risk < 0 else risk
         self.steps = steps
         self.pairs = pairs
+        self.fee = fee
+        self.top_n = top_n
+        self.common_currency = common_currency
+        self.THRESHOLD = THRESHOLD
+        self.current_price = current_price
         self.predictions = predictions
 
         # get the current prices from poloniex
@@ -57,9 +66,10 @@ class Trader:
             plan_for_step = []
             for pair, prediction_list in self.predictions.items():
                 predicted_price = prediction_list[step]
-                current_price = self.ticker[pair]['lowerAsk']
+                current_price = self.ticker[pair][self.current_price]
 
                 _current_delta = current_price - predicted_price
+                _current_delta = self.minus_fee(_current_delta)
                 current_delta = self.to_common_currency(_current_delta, pair)
 
                 # If delta less than the stated threshold --> do nothing!
@@ -84,15 +94,12 @@ class Trader:
 
             common_plan[step] = plan_for_step
 
-        # top_n operations by profitability that must left for each step
-        TOP_N = 3
-
         for step, plan in common_plan.items():
             # sort by delta (profitability metrics)
             plan.sort(key=lambda op: op.delta, reverse=True)
 
             # leave only top_n operations
-            common_plan[step] = plan[:TOP_N]
+            common_plan[step] = plan[:self.top_n]
 
         resulting_plan = []
 
@@ -110,7 +117,7 @@ class Trader:
 
             # select only top_n of them by profitability
             resulting_plan.sort(key=lambda op: op.delta, reverse=True)
-            resulting_plan = resulting_plan[:TOP_N]
+            resulting_plan = resulting_plan[:self.top_n]
         else:
             resulting_plan = common_plan[1]
 
@@ -188,3 +195,11 @@ class Trader:
         average_price = sum(remainders_dict.keys()) / float(len(remainders_dict))
 
         return average_price
+
+    def minus_fee(self, delta):
+        """
+        Subtracts fee from delta
+        :param delta: basic difference
+        :return: difference minus fee for operation
+        """
+        return delta - (delta * self.fee) / 100

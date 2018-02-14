@@ -31,7 +31,11 @@ class Cycle:
         predictions = model.predict()
 
         # pass prediction to Trader logic and get a prepared plan
-        trader = Trader(self.poloniex_service, params.budget, params.risk, params.steps, params.pairs, predictions)
+        trader = Trader(poloniex_service=self.poloniex_service, budget=params.budget, risk=params.risk,
+                        steps=params.steps, pairs=params.pairs, predictions=predictions, fee=params.fee,
+                        top_n=params.top_n, common_currency=params.common_currency, THRESHOLD=params.THRESHOLD,
+                        current_price=params.current_price)
+
         plan = trader.preparePlan()
 
         # perform created plan
