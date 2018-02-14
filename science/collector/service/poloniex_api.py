@@ -138,8 +138,9 @@ class Poloniex:
         return self.api_query('returnFeeInfo')
 
     # Places a buy order in a given market. Required POST parameters are "currencyPair", "rate", and "amount". If
-    # successful, the method will return the order number. Inputs: currencyPair  The current pair rate          price
-    #  the order is buying at amount        Amount of coins to buy Outputs: orderNumber   The order number
+    # successful, the method will return the order number.
+    # Inputs: currencyPair  The current pair rate price the order is buying at amount
+    # Amount of coins to buy Outputs: orderNumber   The order number
     def buy(self, currencyPair, rate, amount, fillOrKill=0, immediateOrCancel=0, postOnly=0):
         return self.api_query('buy', {"currencyPair": currencyPair, "rate": rate, "amount": amount,
                                       "fillOrKill": fillOrKill, "immediateOrCancel": immediateOrCancel,

@@ -78,7 +78,7 @@ class Trader:
                 # If profit more than threshold and 0 --> we must buy currency now
                 # Example: current = 2, predicted = 4, profit = 2, so we must buy it now for 2, to sell later for 4
                 if buy_profit > 0 and buy_profit > self.THRESHOLD:
-                    plan_for_step.append(Operation('BUY', pair, buy_profit, step))
+                    plan_for_step.append(Operation('BUY', pair, buy_profit, step, predicted_price))
                     continue
 
                 # Find an average price for this currency was bought
@@ -96,7 +96,7 @@ class Trader:
 
                     # If profit more than threshold and 0 --> we must sell currency now
                     if sell_profit > 0 and sell_profit > self.THRESHOLD:
-                        plan_for_step.append(Operation('SELL', pair, sell_profit, step))
+                        plan_for_step.append(Operation('SELL', pair, sell_profit, step, predicted_price))
 
             common_plan[step] = plan_for_step
 
@@ -143,22 +143,21 @@ class Trader:
                 # TODO change the opened price for open orders on that we have predicted in our
                 pass
 
-            is_performed = False
+            performed_operation = {}
 
             if operation.op_type == 'BUY':
-                is_performed = self.buy(operation)
+                performed_operation = self.buy(operation)
             elif operation.op_type == 'SELL':
-                is_performed = self.sell(operation)
+                performed_operation = self.sell(operation)
 
-            if is_performed:
-                performed_operations.append(operation)
+            performed_operations.append(performed_operation)
 
         return performed_operations
 
     def to_common_currency(self, amount, pair):
         """
         Converts amount to some common currency
-        :param amount:
+        :param amount: of currency
         :param pair: currency pair
         :return: the same amount converted to common currency
         """
@@ -209,6 +208,7 @@ class Trader:
     def minus_fee(self, delta, op_type):
         """
         Subtracts fee from delta
+        :param op_type: type of operation differs by fee cost
         :param delta: basic difference
         :return: difference minus fee for operation
         """
@@ -226,10 +226,10 @@ class Trader:
         current_delta = self.to_common_currency(_current_delta, pair)
         return current_delta
 
-    def buy(self, operation: Operation) -> bool:
+    def buy(self, operation: Operation) -> dict:
 
-        return False
+        return {}
 
-    def sell(self, operation: Operation) -> bool:
+    def sell(self, operation: Operation) -> dict:
 
-        return False
+        return {}

@@ -11,6 +11,7 @@ class Parameters:
     current_price_from: str
     learn_on: str
     reopen: bool
+    hyperparameters: dict
 
     def __init__(self, params):
         """
@@ -30,6 +31,9 @@ class Parameters:
         - THRESHOLD: the baseline of profitability to perform any operation
         - current_price_from: the field from ticker to rely on while calculating profitability between current price and predicted one
         - learn_on: the column from chartData from poloniex on that to learn on our prediction algorithm
+        - reopen: whether we should reopen all still opened orders on sells or buys?
+        - hyperparameters: dictionary of hyperparameters for prediction model
+            Example: {'SARIMA': {'P': 1, 'D': 0, 'Q': 2, 's': 12}, 'ARIMA': {'P': 1, 'D': 0, 'Q': 2}, ...}
         :param params: parameters as dictionary
         """
         self.budget = params['budget']
@@ -44,6 +48,7 @@ class Parameters:
         self.current_price_from = params['current_price']
         self.learn_on = params['learn_on']
         self.reopen = params['reopen']
+        self.hyperparameters = params['hyperparameters']
 
 
 class Operation:
@@ -51,16 +56,19 @@ class Operation:
     pair: str
     delta: float
     step: int
+    price: float
 
-    def __init__(self, op_type, pair, delta, step):
+    def __init__(self, op_type, pair, profit, step, price):
         """
-        TODO add docs
-        :param op_type:
-        :param pair:
-        :param delta:
-        :param step:
+        DTO for operation
+        :param price: what is predicted price
+        :param op_type: type of the operation (SELL or BUY)
+        :param pair: currency pair
+        :param profit: profitability of operation
+        :param step: in how many steps in future it should happen
         """
         self.op_type = op_type
         self.pair = pair
-        self.delta = delta
+        self.delta = profit
         self.step = step
+        self.price = price

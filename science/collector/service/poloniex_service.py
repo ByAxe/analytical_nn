@@ -232,20 +232,48 @@ class PoloniexPublicService:
     def returnBalances(self) -> dict:
         return poloniexApi.returnBalances()
 
-    def returnTradeHistory(self, currencyPair) -> dict:
-        end = datetime.now()
-        start = end - timedelta(weeks=4)
-        limit = 10000
+    def returnTradeHistory(self, currencyPair, end=datetime.now(),
+                           start=datetime.now() - timedelta(weeks=4), limit=10000) -> dict:
+        """
+        if currencyPair == 'all' ==> return history for all pairs
+        Returns trading history
+        :param limit: how many rows in history will be returned for each pair
+        :param end: upper boundary for selection
+        :param start: low boundary for selection
+        :param currencyPair: for that the history will be returned
+        :return: trade history for pair within mentioned criteria
+        """
         return poloniexApi.returnTradeHistory(currencyPair, start, end, limit)
 
     def returnOpenOrders(self, currencyPair):
+        """
+        if 'all' ==> return open orders for all pairs
+        :param currencyPair: pair for that will be open orders checked
+        :return: dictionary of currently open orders
+        """
         return poloniexApi.returnOpenOrders(currencyPair)
 
     def returnFeeInfo(self) -> dict:
+        """
+        :return: current fees for operations
+        """
         return poloniexApi.returnFeeInfo()
 
-    def buy(self, currencyPair, rate, amount, fillOrKill=0, immediateOrCancel=0, postOnly=0):
-        return poloniexApi.buy(currencyPair, rate, amount, fillOrKill, immediateOrCancel, postOnly)
-
-    def sell(self, currencyPair, rate, amount, fillOrKill=0, immediateOrCancel=0, postOnly=0):
-        return poloniexApi.buy(currencyPair, rate, amount, fillOrKill, immediateOrCancel, postOnly)
+    def operate(self, operation, currencyPair, rate, amount, fillOrKill=0, immediateOrCancel=0, postOnly=0) -> dict:
+        """
+        Buy and Sell methods in API are completely identical by input params
+        :param operation: operation to perform
+        :param currencyPair: what pair to operate on
+        :param rate: price per unit
+        :param amount: how many coins to operate with
+        :param fillOrKill: order will either fill in its entirety or be completely aborted
+        :param immediateOrCancel: order can be partially or completely filled,
+            but any portion of the order that cannot be filled immediately will be canceled
+            rather than left on the order book
+        :param postOnly: order will only be placed if no portion of it fills immediately
+        :return: result of operation
+        """
+        if operation == "BUY":
+            return poloniexApi.buy(currencyPair, rate, amount, fillOrKill, immediateOrCancel, postOnly)
+        elif operation == "SELL":
+            return poloniexApi.sell(currencyPair, rate, amount, fillOrKill, immediateOrCancel, postOnly)
