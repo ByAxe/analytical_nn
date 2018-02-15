@@ -12,7 +12,7 @@ def modifyChartData(chartData):
 
     # strange conversion for SARIMAX model correct input
     for o in chartData:
-        modifiedData.append(np.array([o]))
+        modifiedData.append(np.array([float(o)]))
 
     return modifiedData
 

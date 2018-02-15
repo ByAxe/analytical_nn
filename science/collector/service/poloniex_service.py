@@ -3,14 +3,14 @@ from datetime import datetime, timedelta
 
 from science.collector.core.utils import CHART_DATA_INSERT_PLAN_SQL, \
     CURRENCIES_INSERT_PLAN_SQL, PERIODS, ALL, MAX_DATA_IN_SINGLE_QUERY
-from science.collector.service.poloniex_api import Poloniex
-
-poloniexApi = Poloniex("APIKey", "Secret".encode())
+from science.collector.service.poloniex import Poloniex, Coach
 
 
 class PoloniexPublicService:
     connection = None
     cursor = None
+    myCoach: Coach
+    poloniexApi: Poloniex
 
     def __init__(self, connection, cursor):
         self.connection = connection
@@ -24,8 +24,11 @@ class PoloniexPublicService:
 
         self.connection.commit()
 
+        self.myCoach = Coach(timeFrame=1.0, callLimit=6)
+        self.poloniexApi = Poloniex(key='APIKeys', secret='Secret', coach=self.myCoach)
+
     def updateCurrencies(self):
-        r = poloniexApi.returnCurrencies()
+        r = self.poloniexApi.returnCurrencies()
 
         # clear the table
         self.cursor.execute("DELETE FROM poloniex.currencies")
@@ -42,7 +45,7 @@ class PoloniexPublicService:
         return r
 
     def returnMarketTradeHistory(self, currencyPair: str, start: int, end: int) -> object:
-        return poloniexApi.returnMarketTradeHistory(currencyPair, start, end)
+        return self.poloniexApi.returnTradeHistory(currencyPair, start, end)
 
     def deleteChartData(self, mainCurrency, secondaryCurrency, start, end, period):
         """
@@ -124,7 +127,7 @@ class PoloniexPublicService:
         Because keys in ticker is a currently available pairs of currencies
         :return: list of pairs
         """
-        return poloniexApi.returnTicker().keys()
+        return self.poloniexApi.returnTicker().keys()
 
     def loadChartDataAndSplitOnParts(self, mainCurrency, secondaryCurrency, start, end, period) -> int:
         """
@@ -159,7 +162,8 @@ class PoloniexPublicService:
 
         # load the data from poloniex API
         currencyPair = mainCurrency + '_' + secondaryCurrency
-        chartData = poloniexApi.returnChartData(currencyPair, start, end, period)
+        chartData = self.self.poloniexApi.returnChartData(currencyPair=currencyPair, start=start, end=end,
+                                                          period=period)
 
         if not chartData or len(chartData) < 2:
             return len([])
@@ -177,7 +181,7 @@ class PoloniexPublicService:
         return len(chartData)
 
     def getChartData(self, currencyPair, start, end, period):
-        chartData = poloniexApi.returnChartData(currencyPair, start, end, period)
+        chartData = self.poloniexApi.returnChartData(currencyPair=currencyPair, start=start, end=end, period=period)
 
         if not chartData or len(chartData) < 2:
             return len([])
@@ -224,13 +228,13 @@ class PoloniexPublicService:
         :param pairs: about that information is needed
         :return: filtered data for needed pairs
         """
-        d = poloniexApi.returnTicker()
+        d = self.poloniexApi.returnTicker()
         # filtered_d = dict((k, d[k]) for k in pairs if k in d)
         # return filtered_d
         return d
 
     def returnBalances(self) -> dict:
-        return poloniexApi.returnBalances()
+        return self.poloniexApi.returnBalances()
 
     def returnTradeHistory(self, currencyPair, end=datetime.now(),
                            start=datetime.now() - timedelta(weeks=4), limit=10000) -> dict:
@@ -243,7 +247,7 @@ class PoloniexPublicService:
         :param currencyPair: for that the history will be returned
         :return: trade history for pair within mentioned criteria
         """
-        return poloniexApi.returnTradeHistory(currencyPair, start, end, limit)
+        return self.poloniexApi.returnTradeHistory(currencyPair, start, end, limit)
 
     def returnOpenOrders(self, currencyPair):
         """
@@ -251,29 +255,24 @@ class PoloniexPublicService:
         :param currencyPair: pair for that will be open orders checked
         :return: dictionary of currently open orders
         """
-        return poloniexApi.returnOpenOrders(currencyPair)
+        return self.poloniexApi.returnOpenOrders(currencyPair)
 
     def returnFeeInfo(self) -> dict:
         """
         :return: current fees for operations
         """
-        return poloniexApi.returnFeeInfo()
+        return self.poloniexApi.returnFeeInfo()
 
-    def operate(self, operation, currencyPair, rate, amount, fillOrKill=0, immediateOrCancel=0, postOnly=0) -> dict:
+    def operate(self, operation, currencyPair, rate, amount, orderType=1, ) -> dict:
         """
         Buy and Sell methods in API are completely identical by input params
         :param operation: operation to perform
         :param currencyPair: what pair to operate on
         :param rate: price per unit
         :param amount: how many coins to operate with
-        :param fillOrKill: order will either fill in its entirety or be completely aborted
-        :param immediateOrCancel: order can be partially or completely filled,
-            but any portion of the order that cannot be filled immediately will be canceled
-            rather than left on the order book
-        :param postOnly: order will only be placed if no portion of it fills immediately
-        :return: result of operation
+        :param orderType: order will either fill in its entirety or be completely aborted
         """
         if operation == "BUY":
-            return poloniexApi.buy(currencyPair, rate, amount, fillOrKill, immediateOrCancel, postOnly)
+            return self.poloniexApi.buy(currencyPair=currencyPair, rate=rate, amount=amount, orderType=orderType)
         elif operation == "SELL":
-            return poloniexApi.sell(currencyPair, rate, amount, fillOrKill, immediateOrCancel, postOnly)
+            return self.poloniexApi.sell(currencyPair=currencyPair, rate=rate, amount=amount, orderType=orderType)
