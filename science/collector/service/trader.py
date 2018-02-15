@@ -91,12 +91,21 @@ class Trader:
                 if secondary_balance > 0.0:
                     bought_for = self.calculate_avg_price(tradeHistoryForPair, secondary_balance)
 
-                    # calculate profit of selling it now relying on price we have bought it for previously
-                    sell_profit = self.get_delta(two=bought_for, one=predicted_price, pair=pair, op_type='SELL')
+                    # calculate profit of selling it NOW relying on price we have bought it for previously
+                    current_sell_profit = self.get_delta(two=bought_for, one=current_price, pair=pair,
+                                                         op_type='SELL')
+
+                    # calculate profit of selling it LATER relying on price we have bought it for previously
+                    predicted_sell_profit = self.get_delta(two=bought_for, one=predicted_price, pair=pair,
+                                                           op_type='SELL')
 
                     # If profit more than threshold and 0 --> we must sell currency now
-                    if sell_profit > 0 and sell_profit > self.THRESHOLD:
-                        plan_for_step.append(Operation('SELL', pair, sell_profit, step, predicted_price))
+                    if predicted_sell_profit > 0 and predicted_sell_profit > self.THRESHOLD:
+                        plan_for_step.append(Operation('SELL', pair, predicted_sell_profit, step, predicted_price))
+
+                    # If profit more than threshold and 0 --> we must sell currency now
+                    if step == 1 and current_sell_profit > 0 and current_sell_profit > self.THRESHOLD:
+                        plan_for_step.append(Operation('SELL', pair, current_sell_profit, step, current_price))
 
             common_plan[step] = plan_for_step
 
@@ -137,10 +146,11 @@ class Trader:
         performed_operations = []
 
         for operation in plan:
+            # if there is an open orders for the currencies we have planned to buy or sell -> cancel previously opened order
             if self.reopen:
-                # TODO if there is an open orders for the currencies we have planned to buy or sell
-                # TODO change the opened price for open orders on that we have predicted in our
-                pass
+                for order in self.orders[operation.pair] or []:
+                    if order['type'].upper() == operation.op_type:
+                        self.poloniex_service.cancelOrder(order['orderNumber'])
 
             amount = round(self.budget / self.top_n, 8)
 
