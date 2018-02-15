@@ -12,6 +12,7 @@ class Parameters:
     learn_on: str
     reopen: bool
     hyperparameters: dict
+    algorithm: str
 
     def __init__(self, params):
         """
@@ -34,6 +35,7 @@ class Parameters:
         - reopen: whether we should reopen all still opened orders on sells or buys?
         - hyperparameters: dictionary of hyperparameters for prediction model
             Example: {'SARIMA': {'P': 1, 'D': 0, 'Q': 2, 's': 12}, 'ARIMA': {'P': 1, 'D': 0, 'Q': 2}, ...}
+        - algorithm: what algorithm to use for prediction
         :param params: parameters as dictionary
         """
         self.budget = params['budget']
@@ -45,10 +47,11 @@ class Parameters:
         self.top_n = params['top_n']
         self.common_currency = params['common_currency']
         self.THRESHOLD = params['THRESHOLD']
-        self.current_price_from = params['current_price']
+        self.current_price_from = params['current_price_from']
         self.learn_on = params['learn_on']
         self.reopen = params['reopen']
         self.hyperparameters = params['hyperparameters']
+        self.algorithm = params['algorithm']
 
 
 class Operation:

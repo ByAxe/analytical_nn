@@ -1,0 +1,36 @@
+{
+  "budget": 0.00001000,
+  "pairs": [
+    "BTC_ETH",
+    "BTC_LTC",
+    "BTC_BCH",
+    "BTC_STEEM",
+    "BTC_ZEC"
+  ],
+  "risk": 70,
+  "window": {
+    "MONTH": 1
+  },
+  "period": 300,
+  "steps": 2,
+  "common_currency": "BTC",
+  "THRESHOLD": 0.00000100,
+  "current_price_from": "lowerAsk",
+  "learn_on": "weightedAverage",
+  "reopen": false,
+  "top_n": 3,
+  "algorithm": "ARIMA",
+  "hyperparameters": {
+    "SARIMA": {
+      "P": 1,
+      "D": 0,
+      "Q": 2,
+      "s": 1
+    },
+    "ARIMA": {
+      "P": 1,
+      "D": 0,
+      "Q": 2
+    }
+  }
+}

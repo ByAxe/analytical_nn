@@ -27,7 +27,7 @@ class Cycle:
         data = self.getAllDataForParams(params.pairs, params.window, params.period, params.learn_on)
 
         # load data into Model and get prediction
-        model = Model(data, params.steps)
+        model = Model(data, params.steps, params.hyperparameters, params.algorithm)
         predictions = model.predict()
 
         # pass prediction to Trader logic and get a prepared plan
