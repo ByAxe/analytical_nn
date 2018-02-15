@@ -15,7 +15,7 @@ class Parameters:
 
     def __init__(self, params):
         """
-        - Budget: allowed overall maximum (measured in USD) for all operations during the iteration
+        - Budget: allowed overall maximum (measured in BTC) for all operations during the iteration
         - Pairs: the list of pairs among those algorithm creates a plan
         - Risk: The number of steps that a trader will count on when building a plan,
             as what exactly should happen. Measured in %.

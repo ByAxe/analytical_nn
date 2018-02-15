@@ -20,7 +20,7 @@ class Trader:
         :param pairs: all pair for that prediction made
         :param steps: amount of steps in future on that prediction made
         :param risk: The number of steps that a trader will count on when building a plan,
-        :param budget: allowed overall maximum (measured in USD) for all operations during the iteration
+        :param budget: allowed overall maximum (measured in BTC) for all operations during the iteration
         as what exactly should happen. Measured in %.
         :param poloniex_service: wrapper for interaction with poloniex api
         """
@@ -137,19 +137,15 @@ class Trader:
         performed_operations = []
 
         for operation in plan:
-
             if self.reopen:
                 # TODO if there is an open orders for the currencies we have planned to buy or sell
                 # TODO change the opened price for open orders on that we have predicted in our
                 pass
 
-            performed_operation = {}
+            amount = round(self.budget / self.top_n, 8)
 
-            if operation.op_type == 'BUY':
-                performed_operation = self.buy(operation)
-            elif operation.op_type == 'SELL':
-                performed_operation = self.sell(operation)
-
+            performed_operation = self.poloniex_service.operate(operation.op_type, operation.pair, operation.price,
+                                                                amount, fillOrKill=1)
             performed_operations.append(performed_operation)
 
         return performed_operations
@@ -225,11 +221,3 @@ class Trader:
         # convert to common currency
         current_delta = self.to_common_currency(_current_delta, pair)
         return current_delta
-
-    def buy(self, operation: Operation) -> dict:
-
-        return {}
-
-    def sell(self, operation: Operation) -> dict:
-
-        return {}
