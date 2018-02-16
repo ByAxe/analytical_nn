@@ -154,8 +154,10 @@ class Trader:
 
             amount = round(self.budget / self.top_n, 8)
 
-            performed_operation = self.poloniex_service.operate(operation.op_type, operation.pair, operation.price,
-                                                                amount, fillOrKill=1)
+            performed_operation = self.poloniex_service.operate(operation=operation.op_type,
+                                                                currencyPair=operation.pair,
+                                                                rate=operation.price,
+                                                                amount=amount)
             performed_operations.append(performed_operation)
 
         return performed_operations

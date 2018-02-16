@@ -1,18 +1,33 @@
 {
-  "budget": 0.00001000,
+  "budget": 0.00000300,
   "pairs": [
     "BTC_ETH",
     "BTC_LTC",
     "BTC_BCH",
     "BTC_STEEM",
-    "BTC_ZEC"
+    "BTC_ZEC",
+    "BTC_XEM",
+    "BTC_DOGE",
+    "BTC_XPM",
+    "BTC_ETC",
+    "BTC_GNT",
+    "BTC_PASC",
+    "BTC_SYS",
+    "BTC_BCN",
+    "BTC_XMR",
+    "BTC_NXT",
+    "BTC_DASH",
+    "BTC_SC",
+    "BTC_PINK",
+    "BTC_DGB",
+    "BTC_ZRX"
   ],
   "risk": 70,
   "window": {
     "MONTH": 1
   },
   "period": 300,
-  "steps": 2,
+  "steps": 1,
   "common_currency": "BTC",
   "THRESHOLD": 0.00000100,
   "current_price_from": "lowerAsk",
@@ -25,7 +40,7 @@
       "P": 1,
       "D": 0,
       "Q": 2,
-      "s": 1
+      "s": 12
     },
     "ARIMA": {
       "P": 1,

@@ -2,7 +2,7 @@ import time
 from datetime import datetime, timedelta
 
 from science.collector.core.utils import CHART_DATA_INSERT_PLAN_SQL, \
-    CURRENCIES_INSERT_PLAN_SQL, PERIODS, ALL, MAX_DATA_IN_SINGLE_QUERY
+    CURRENCIES_INSERT_PLAN_SQL, PERIODS, ALL, MAX_DATA_IN_SINGLE_QUERY, KEY, SECRET
 from science.collector.service.poloniex import Poloniex, Coach
 
 
@@ -25,7 +25,7 @@ class PoloniexPublicService:
         self.connection.commit()
 
         self.myCoach = Coach(timeFrame=1.0, callLimit=6)
-        self.poloniexApi = Poloniex(key='APIKeys', secret='Secret', coach=self.myCoach)
+        self.poloniexApi = Poloniex(key=KEY, secret=SECRET, coach=self.myCoach)
 
     def updateCurrencies(self):
         r = self.poloniexApi.returnCurrencies()
@@ -263,7 +263,7 @@ class PoloniexPublicService:
         """
         return self.poloniexApi.returnFeeInfo()
 
-    def operate(self, operation, currencyPair, rate, amount, orderType=1, ) -> dict:
+    def operate(self, operation, currencyPair, rate, amount, orderType=1) -> dict:
         """
         Buy and Sell methods in API are completely identical by input params
         :param operation: operation to perform
@@ -276,3 +276,6 @@ class PoloniexPublicService:
             return self.poloniexApi.buy(currencyPair=currencyPair, rate=rate, amount=amount, orderType=orderType)
         elif operation == "SELL":
             return self.poloniexApi.sell(currencyPair=currencyPair, rate=rate, amount=amount, orderType=orderType)
+
+    def cancelOrder(self, orderNumber):
+        self.poloniexApi.cancelOrder(orderNumber)
