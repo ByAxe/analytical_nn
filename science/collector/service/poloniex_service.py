@@ -1,3 +1,4 @@
+import logging
 import time
 from datetime import datetime, timedelta
 
@@ -261,10 +262,13 @@ class PoloniexPublicService:
         :param amount: how many coins to operate with
         :param orderType: order will either fill in its entirety or be completely aborted
         """
-        if operation == "BUY":
-            return self.poloniexApi.buy(currencyPair=currencyPair, rate=rate, amount=amount, orderType=orderType)
-        elif operation == "SELL":
-            return self.poloniexApi.sell(currencyPair=currencyPair, rate=rate, amount=amount, orderType=orderType)
+        try:
+            if operation == "BUY":
+                return self.poloniexApi.buy(currencyPair=currencyPair, rate=rate, amount=amount, orderType=orderType)
+            elif operation == "SELL":
+                return self.poloniexApi.sell(currencyPair=currencyPair, rate=rate, amount=amount, orderType=orderType)
+        except:
+            logging.exception('Exception occured!')
 
     def cancelOrder(self, orderNumber):
         self.poloniexApi.cancelOrder(orderNumber)

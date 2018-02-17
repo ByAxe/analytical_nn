@@ -1,0 +1,5 @@
+Flask
+pandas
+statsmodels
+gunicorn==19.7.1
+requests
