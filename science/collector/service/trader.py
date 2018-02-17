@@ -9,7 +9,7 @@ class Trader:
     ticker, balances, tradeHistory, orders, current_price, takerFee, makerFee, = {}, {}, {}, {}, '', 0.0, 0.0
 
     def __init__(self, poloniex_service, budget, steps, pairs, predictions, risk=0, top_n=3,
-                 common_currency='BTC', THRESHOLD=0.000001, current_price_from='lowerAsk', reopen=False):
+                 common_currency='BTC', THRESHOLD=0.000001, current_price_from='last', reopen=False):
         """
         :param predictions: from model that makes predictions
         :param reopen: whether we must reopen all previously opened orders with new iteration if the currency coincide
@@ -50,7 +50,7 @@ class Trader:
 
         # Obtain current fees for operations from market
         fees = self.poloniex_service.returnFeeInfo()
-        self.makerFee, self.takerFee = fees['makerFee'], fees['takerFee']
+        self.makerFee, self.takerFee = float(fees['makerFee']), float(fees['takerFee'])
 
     def preparePlan(self) -> list:
         """
@@ -82,13 +82,13 @@ class Trader:
                     continue
 
                 # Find an average price for this currency was bought
-                tradeHistoryForPair: list = self.tradeHistory[pair]
+                tradeHistoryForPair: list = self.tradeHistory.get(pair, None)
 
                 main_balance = float(self.balances[main_currency])
                 secondary_balance = float(self.balances[secondary_currency])
 
                 # if we already have on balance this currency so we must investigate the price for what it was bought
-                if secondary_balance > 0.0:
+                if tradeHistoryForPair and secondary_balance > 0.0:
                     bought_for = self.calculate_avg_price(tradeHistoryForPair, secondary_balance)
 
                     # calculate profit of selling it NOW relying on price we have bought it for previously
@@ -152,13 +152,17 @@ class Trader:
                     if order['type'].upper() == operation.op_type:
                         self.poloniex_service.cancelOrder(order['orderNumber'])
 
-            amount = round(self.budget / self.top_n, 8)
+            amount = round(self.budget / operation.price / self.top_n, 8)
+            total = amount * operation.price
+            print('Amount =', amount, '; Total =', total)
 
-            performed_operation = self.poloniex_service.operate(operation=operation.op_type,
-                                                                currencyPair=operation.pair,
-                                                                rate=operation.price,
-                                                                amount=amount)
-            performed_operations.append(performed_operation)
+            if total >= 0.0001:
+                performed_operation = self.poloniex_service.operate(operation=operation.op_type,
+                                                                    currencyPair=operation.pair,
+                                                                    rate=operation.price,
+                                                                    amount=amount)
+                performed_operations.append(performed_operation)
+                print('Performed operation:', performed_operation)
 
         return performed_operations
 
@@ -225,7 +229,7 @@ class Trader:
 
     def get_delta(self, one, two, pair, op_type):
         # simple difference between two numbers
-        __current_delta = one - two
+        __current_delta = float(one) - float(two)
 
         # minus fee
         _current_delta = self.minus_fee(__current_delta, op_type)

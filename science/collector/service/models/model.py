@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from science.collector.service.models import sarima
 
 
@@ -25,9 +27,13 @@ class Model:
         """
         predictions = None
 
+        print(datetime.now(), 'Prediction algorithm started...')
+
         if self.algorithm == "SARIMA":
             predictions = sarima.makePrediction(self.data, self.futureSteps, self.hyperparameters)
         if self.algorithm == "ARIMA":
             predictions = sarima.makePrediction(self.data, self.futureSteps, self.hyperparameters)
+
+        print(datetime.now(), 'Prediction algorithm finished')
 
         return predictions

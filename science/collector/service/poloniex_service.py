@@ -2,7 +2,7 @@ import time
 from datetime import datetime, timedelta
 
 from science.collector.core.utils import CHART_DATA_INSERT_PLAN_SQL, \
-    CURRENCIES_INSERT_PLAN_SQL, PERIODS, ALL, MAX_DATA_IN_SINGLE_QUERY, KEY, SECRET
+    CURRENCIES_INSERT_PLAN_SQL, PERIODS, ALL, MAX_DATA_IN_SINGLE_QUERY, KEY, SECRET, datetimeToTimestamp
 from science.collector.service.poloniex import Poloniex, Coach
 
 
@@ -247,7 +247,8 @@ class PoloniexPublicService:
         :param currencyPair: for that the history will be returned
         :return: trade history for pair within mentioned criteria
         """
-        return self.poloniexApi.returnTradeHistory(currencyPair, start, end, limit)
+        return self.poloniexApi.returnTradeHistory(currencyPair, datetimeToTimestamp(start), datetimeToTimestamp(end),
+                                                   limit)
 
     def returnOpenOrders(self, currencyPair):
         """
@@ -263,7 +264,7 @@ class PoloniexPublicService:
         """
         return self.poloniexApi.returnFeeInfo()
 
-    def operate(self, operation, currencyPair, rate, amount, orderType=1) -> dict:
+    def operate(self, operation, currencyPair, rate, amount, orderType='fillOrKill') -> dict:
         """
         Buy and Sell methods in API are completely identical by input params
         :param operation: operation to perform

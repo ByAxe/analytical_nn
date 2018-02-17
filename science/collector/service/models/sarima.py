@@ -42,7 +42,7 @@ def makePrediction(data: dict, futureSteps: int, hyperparameters=None) -> dict:
         for step in range(futureSteps):
             model = SARIMAX(chartData, seasonal_order=(P, D, Q, s), enforce_stationarity=False,
                             enforce_invertibility=False)
-            model_fit = model.fit(disp=0, maxiter=1000, method='nm')
+            model_fit = model.fit(disp=0, maxiter=1500, method='nm')
 
             output = model_fit.forecast()
             predicted_value = output[0]

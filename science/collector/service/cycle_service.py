@@ -24,6 +24,7 @@ class Cycle:
         # take all the params those were passed into method and wraps in up into Object
         params = Parameters(params_dict)
         # get all the data from Poloniex
+        print(datetime.now(), 'Started getting data for pairs:', params.pairs, 'And window:', params.window)
         data = self.getAllDataForParams(params.pairs, params.window, params.period, params.learn_on)
 
         # load data into Model and get prediction
@@ -36,6 +37,7 @@ class Cycle:
                         top_n=params.top_n, common_currency=params.common_currency, THRESHOLD=params.THRESHOLD,
                         current_price_from=params.current_price_from, reopen=params.reopen)
 
+        print(datetime.now(), 'Started plan preparation...')
         plan = trader.preparePlan()
 
         # perform created plan
