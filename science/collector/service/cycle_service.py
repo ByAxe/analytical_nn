@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 
 from science.collector.core.entities import Parameters
 from science.collector.core.utils import datetimeToTimestamp
-from science.collector.service.models.model import Model
+from science.collector.service.models.api.model import Model
 from science.collector.service.poloniex_service import PoloniexPublicService
 from science.collector.service.trader import Trader
 

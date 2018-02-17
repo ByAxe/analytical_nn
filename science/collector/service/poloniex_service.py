@@ -1,8 +1,7 @@
 import time
 from datetime import datetime, timedelta
 
-from science.collector.core.utils import CHART_DATA_INSERT_PLAN_SQL, \
-    CURRENCIES_INSERT_PLAN_SQL, PERIODS, ALL, MAX_DATA_IN_SINGLE_QUERY, KEY, SECRET, datetimeToTimestamp
+from science.collector.core.utils import PERIODS, ALL, MAX_DATA_IN_SINGLE_QUERY, KEY, SECRET, datetimeToTimestamp
 from science.collector.service.poloniex import Poloniex, Coach
 
 
@@ -12,18 +11,7 @@ class PoloniexPublicService:
     myCoach: Coach
     poloniexApi: Poloniex
 
-    def __init__(self, connection, cursor):
-        self.connection = connection
-        self.cursor = cursor
-
-        # prepares the query for insert
-        self.cursor.execute(CURRENCIES_INSERT_PLAN_SQL)
-
-        # prepares the query for insert
-        self.cursor.execute(CHART_DATA_INSERT_PLAN_SQL)
-
-        self.connection.commit()
-
+    def __init__(self):
         self.myCoach = Coach(timeFrame=1.0, callLimit=6)
         self.poloniexApi = Poloniex(key=KEY, secret=SECRET, coach=self.myCoach)
 

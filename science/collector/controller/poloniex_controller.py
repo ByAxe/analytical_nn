@@ -1,9 +1,7 @@
 # from flask_restful import Resource, Api
 import json
 
-import psycopg2
-from flask import Flask, g, request
-from psycopg2.extras import DictCursor
+from flask import Flask, request
 
 from science.collector.core.utils import json_response
 from science.collector.service.cycle_service import Cycle
@@ -20,11 +18,8 @@ def before_request():
     Initializes everything before the first request
     Works similar to post-construct phase in Java
     """
-    g.connection = psycopg2.connect(app.config['DATABASE_NAME'])
-    g.cur = g.connection.cursor(cursor_factory=psycopg2.extras.DictCursor)
-
     global poloniexPublicService, cycle
-    poloniexPublicService = PoloniexPublicService(g.connection, g.cur)
+    poloniexPublicService = PoloniexPublicService()
     cycle = Cycle(poloniexPublicService)
 
 
