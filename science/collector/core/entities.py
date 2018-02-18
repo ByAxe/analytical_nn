@@ -1,4 +1,5 @@
 class Parameters:
+    params: dict
     budget: float
     pairs: list
     risk: int
@@ -16,6 +17,7 @@ class Parameters:
 
     def __init__(self, params):
         """
+        - params: save the whole dictionary
         - Budget: allowed overall maximum (measured in BTC) for all operations during the iteration
         - Pairs: the list of pairs among those algorithm creates a plan
         - Risk: The number of steps that a trader will count on when building a plan,
@@ -38,6 +40,8 @@ class Parameters:
         - algorithm: what algorithm to use for prediction
         :param params: parameters as dictionary
         """
+        self.params = params
+
         self.budget = params['budget']
         self.pairs = params['pairs']
         self.risk = params['risk']
@@ -52,6 +56,9 @@ class Parameters:
         self.reopen = params['reopen']
         self.hyperparameters = params['hyperparameters']
         self.algorithm = params['algorithm']
+
+    def __str__(self):
+        return self.params
 
 
 class Operation:
@@ -75,3 +82,7 @@ class Operation:
         self.delta = profit
         self.step = step
         self.price = price
+
+    def __str__(self):
+        return "Operation{operation_type = %s, pair = %s, delta = %s, step = %s, price = %s}" \
+               % (self.op_type, self.pair, self.delta, self.step, self.price)

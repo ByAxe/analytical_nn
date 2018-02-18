@@ -1,5 +1,6 @@
-Flask
-pandas
-statsmodels
+Flask==0.12.2
+pandas==0.22.0
+statsmodels==0.8.0
 gunicorn==19.7.1
-requests
+requests==2.18.4
+schedule==0.5.0

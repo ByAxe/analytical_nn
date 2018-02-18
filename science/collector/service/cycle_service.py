@@ -23,6 +23,7 @@ class Cycle:
         """
         # take all the params those were passed into method and wraps in up into Object
         params = Parameters(params_dict)
+        print(datetime.now(), 'Started iteration with params:', params)
         # get all the data from Poloniex
         print(datetime.now(), 'Started getting data for pairs:', params.pairs, 'And window:', params.window)
         data = self.getAllDataForParams(params.pairs, params.window, params.period, params.learn_on)
@@ -39,9 +40,10 @@ class Cycle:
 
         print(datetime.now(), 'Started plan preparation...')
         plan = trader.preparePlan()
-
+        print(datetime.now(), 'Prepared a plan:', plan)
         # perform created plan
         operations = trader.trade(plan)
+        print(datetime.now(), 'Performed operations:', operations)
 
         # return performed operations
         return operations

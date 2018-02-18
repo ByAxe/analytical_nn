@@ -27,6 +27,42 @@ SECRET = "af6163ddd2cd1b55e771c45c981a46c9bb77de553c75e6862af41b00cb3f5c5f1fced0
 ALL = 'all'
 PAUSE_BETWEEN_QUERIES_SECONDS = .200
 
+CYCLE_PARAMETERS = {
+    "budget": 0.00030000,
+    "pairs": [
+        "ETH_BCH",
+        "ETH_ZRX",
+        "ETH_STEEM",
+        "ETH_ZEC"
+    ],
+    "risk": 70,
+    "window": {
+        "MONTH": 1
+    },
+    "period": 300,
+    "steps": 1,
+    "common_currency": "ETH",
+    "THRESHOLD": 0.00000050,
+    "current_price_from": "last",
+    "learn_on": "weightedAverage",
+    "reopen": False,
+    "top_n": 3,
+    "algorithm": "SARIMA",
+    "hyperparameters": {
+        "SARIMA": {
+            "P": 1,
+            "D": 0,
+            "Q": 2,
+            "s": 12
+        },
+        "ARIMA": {
+            "P": 1,
+            "D": 0,
+            "Q": 2
+        }
+    }
+}
+
 
 def search_book(books, book_id):
     for book in books:

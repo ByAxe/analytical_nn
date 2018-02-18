@@ -1,0 +1,6 @@
+cron:
+#- description: "Regular prediciton (every 5 minutes)"
+#  url: /private/cycle
+#  schedule: every 5 mins from 08:00 to 23:00
+#  method: POST
+#  parameters:
