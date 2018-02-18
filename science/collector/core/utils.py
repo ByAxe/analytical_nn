@@ -30,7 +30,11 @@ PAUSE_BETWEEN_QUERIES_SECONDS = .200
 CYCLE_PARAMETERS = {
     "budget": 0.00030000,
     "pairs": [
+        "ETH_LSK",
         "ETH_BCH",
+        "ETH_ETC",
+        "ETH_REP",
+        "ETH_GNT",
         "ETH_ZRX",
         "ETH_STEEM",
         "ETH_ZEC"

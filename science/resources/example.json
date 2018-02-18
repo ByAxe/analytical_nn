@@ -1,7 +1,11 @@
 {
   "budget": 0.00030000,
   "pairs": [
+    "ETH_LSK",
     "ETH_BCH",
+    "ETH_ETC",
+    "ETH_REP",
+    "ETH_GNT",
     "ETH_ZRX",
     "ETH_STEEM",
     "ETH_ZEC"
@@ -11,7 +15,7 @@
     "MONTH": 1
   },
   "period": 300,
-  "steps": 2,
+  "steps": 1,
   "common_currency": "ETH",
   "THRESHOLD": 0.00000050,
   "current_price_from": "last",

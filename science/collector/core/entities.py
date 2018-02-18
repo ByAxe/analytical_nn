@@ -58,7 +58,7 @@ class Parameters:
         self.algorithm = params['algorithm']
 
     def __str__(self):
-        return self.params
+        return self.params.__str__()
 
 
 class Operation:
