@@ -20,10 +20,9 @@ def makePrediction(data: dict, futureSteps: int, hyperparameters=None, algorithm
     """
 
     # Create pool and specify amount of simultaneous processes
-    pool_size = multiprocessing.cpu_count() - 1
+    pool_size = multiprocessing.cpu_count()
     pool = multiprocessing.Pool(
-        processes=pool_size,
-        maxtasksperchild=2,
+        processes=pool_size
     )
 
     # if hyperparameters are not specified -> do it default params
