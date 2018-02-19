@@ -40,9 +40,11 @@ class Cycle:
 
         print(datetime.now(), 'Started plan preparation...')
         plan = trader.preparePlan()
+        print(datetime.now(), 'Planned operations:', [p.__str__() for p in plan])
+
         # perform created plan
         operations = trader.trade(plan)
-        print(datetime.now(), 'Performed operations:', operations)
+        print(datetime.now(), 'Performed operations:', [op.__str__() for op in operations])
 
         # return performed operations
         return operations
