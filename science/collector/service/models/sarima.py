@@ -1,25 +1,11 @@
+import multiprocessing
+import warnings
 from datetime import datetime
-from multiprocessing.pool import ThreadPool
 
 import numpy as np
 from statsmodels.tsa.statespace.sarimax import SARIMAX
 
-pool = ThreadPool(processes=8)
-
-
-def modifyChartData(chartData: list) -> list:
-    """
-    Somehow modify data for learning to obtain better prediction or convenient results
-    :param chartData: list of observations
-    :return: the same list of observations, but modified
-    """
-    modifiedData = []
-
-    # strange conversion for SARIMAX model correct input
-    for o in chartData:
-        modifiedData.append(np.array([float(o)]))
-
-    return modifiedData
+warnings.simplefilter(action='ignore', category=FutureWarning)
 
 
 def makePrediction(data: dict, futureSteps: int, hyperparameters=None) -> dict:
@@ -31,23 +17,31 @@ def makePrediction(data: dict, futureSteps: int, hyperparameters=None) -> dict:
     :return: dictionary of data where key = currencyPair and
         value = dict of predictions (equal size to futureSteps variable) where key=step_number value = prediction
     """
+    pool_size = multiprocessing.cpu_count() - 1
+    pool = multiprocessing.Pool(
+        processes=pool_size,
+        maxtasksperchild=2,
+    )
+
     if hyperparameters is None:
         hyperparameters = {'SARIMA': {'P': 1, 'D': 0, 'Q': 2, 's': 12}}
 
-    predictions = {}
-    async_predictions = {}
+    inputs = [
+        (pair, chartData, futureSteps, hyperparameters)
+        for pair, chartData in data.items()
+    ]
 
-    for pair, chartData in data.items():
-        async_predictions[pair] = pool.apply_async(makePredictionForPair,
-                                                   (pair, chartData, futureSteps, hyperparameters))
+    predictions = pool.map(makePredictionForPair, inputs)
 
-    for pair, prediction in async_predictions.items():
-        predictions[pair] = prediction.get()
+    pool.close()  # no more tasks
+    pool.join()  # wrap up current tasks
 
     return predictions
 
 
-def makePredictionForPair(pair: str, chartData: list, futureSteps: int, hyperparameters: dict) -> dict:
+def makePredictionForPair(parameters: tuple) -> dict:
+    pair, chartData, futureSteps, hyperparameters = parameters
+
     print(datetime.now(), 'Started prediction for pair:', pair)
 
     P, D, Q, s = hyperparameters['SARIMA']['P'], hyperparameters['SARIMA']['D'], \
@@ -70,3 +64,18 @@ def makePredictionForPair(pair: str, chartData: list, futureSteps: int, hyperpar
 
     print(datetime.now(), 'Finished prediction for pair:', pair)
     return prediction
+
+
+def modifyChartData(chartData: list) -> list:
+    """
+    Somehow modify data for learning to obtain better prediction or convenient results
+    :param chartData: list of observations
+    :return: the same list of observations, but modified
+    """
+    modifiedData = []
+
+    # strange conversion for SARIMAX model correct input
+    for o in chartData:
+        modifiedData.append(np.array([float(o)]))
+
+    return modifiedData
