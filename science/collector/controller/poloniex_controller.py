@@ -1,10 +1,13 @@
 # from flask_restful import Resource, Api
 import json
 import logging
+import time
+from datetime import datetime
 
+import schedule
 from flask import Flask, request
 
-from science.collector.core.utils import json_response
+from science.collector.core.utils import json_response, CYCLE_PARAMETERS
 from science.collector.service.cycle_service import Cycle
 from science.collector.service.poloniex_service import PoloniexPublicService
 
@@ -133,6 +136,20 @@ def startCycleIteration():
 
     #  return created plan and made operations
     return json_response(str(operations))
+
+
+def job():
+    print(datetime.now(), "I'm working...")
+    cycle.startCycleIteration(params_dict=CYCLE_PARAMETERS)
+
+
+@app.route('/private/fire/cycle', methods=['GET'])
+def fireCycle():
+    schedule.every(5).minutes.do(job)
+
+    while True:
+        schedule.run_pending()
+        time.sleep(.001)
 
 
 @app.errorhandler(404)

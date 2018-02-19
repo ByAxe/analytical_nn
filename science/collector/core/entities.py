@@ -67,8 +67,9 @@ class Operation:
     delta: float
     step: int
     price: float
+    orderType: str
 
-    def __init__(self, op_type, pair, profit, step, price):
+    def __init__(self, op_type, pair, profit, step, price, orderType='immediateOrCancel'):
         """
         DTO for operation
         :param price: what is predicted price
@@ -82,7 +83,8 @@ class Operation:
         self.delta = profit
         self.step = step
         self.price = price
+        self.orderType = orderType
 
     def __str__(self):
-        return "Operation{operation_type = %s, pair = %s, delta = %s, step = %s, price = %s}" \
-               % (self.op_type, self.pair, self.delta, self.step, self.price)
+        return "Operation{operation_type = %s, pair = %s, delta = %s, step = %s, price = %s, orderType=%s}" \
+               % (self.op_type, self.pair, self.delta, self.step, self.price, self.orderType)

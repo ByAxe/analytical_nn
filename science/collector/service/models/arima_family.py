@@ -52,12 +52,11 @@ def makePredictionForPair(parameters: tuple) -> dict:
 
     print(datetime.now(), 'Started prediction for pair:', pair)
 
-    if algorithm == 'ARIMA':
-        P, D, Q = hyperparameters['ARIMA']['P'], hyperparameters['ARIMA']['D'], \
-                  hyperparameters['ARIMA']['Q']
-    elif algorithm == 'SARIMA':
-        P, D, Q, s = hyperparameters['SARIMA']['P'], hyperparameters['SARIMA']['D'], \
-                     hyperparameters['SARIMA']['Q'], hyperparameters['SARIMA']['s']
+    P, D, Q = hyperparameters[algorithm]['P'], hyperparameters[algorithm]['D'], \
+              hyperparameters[algorithm]['Q']
+
+    if algorithm == 'SARIMA':
+        s = hyperparameters['SARIMA']['s']
 
     prediction = {}
 
@@ -79,7 +78,7 @@ def makePredictionForPair(parameters: tuple) -> dict:
         chartData.append(np.array([predicted_value]))
 
     print(datetime.now(), 'Finished prediction for pair:', pair)
-    return prediction
+    return {pair: prediction}
 
 
 def modifyChartData(chartData: list) -> list:

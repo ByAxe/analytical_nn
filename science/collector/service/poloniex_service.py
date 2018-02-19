@@ -253,7 +253,7 @@ class PoloniexPublicService:
         """
         return self.poloniexApi.returnFeeInfo()
 
-    def operate(self, operation, currencyPair, rate, amount, orderType='fillOrKill') -> dict:
+    def operate(self, operation, currencyPair, rate, amount, orderType='immediateOrCancel') -> dict:
         """
         Buy and Sell methods in API are completely identical by input params
         :param operation: operation to perform

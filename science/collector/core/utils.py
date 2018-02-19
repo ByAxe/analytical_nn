@@ -28,7 +28,7 @@ ALL = 'all'
 PAUSE_BETWEEN_QUERIES_SECONDS = .200
 
 CYCLE_PARAMETERS = {
-    "budget": 0.00030000,
+    "budget": 0.00022000,
     "pairs": [
         "ETH_LSK",
         "ETH_BCH",
@@ -44,13 +44,13 @@ CYCLE_PARAMETERS = {
         "MONTH": 1
     },
     "period": 300,
-    "steps": 1,
+    "steps": 3,
     "common_currency": "ETH",
     "THRESHOLD": 0.00000050,
     "current_price_from": "last",
     "learn_on": "weightedAverage",
     "reopen": False,
-    "top_n": 3,
+    "top_n": 2,
     "algorithm": "SARIMA",
     "hyperparameters": {
         "SARIMA": {

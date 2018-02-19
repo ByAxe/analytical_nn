@@ -34,7 +34,10 @@ class Trader:
         self.common_currency = common_currency
         self.THRESHOLD = THRESHOLD
         self.current_price_from = current_price_from
-        self.predictions = predictions
+
+        for p in predictions:
+            for k, v in p.items():
+                self.predictions[k] = v
 
         # get the current prices from poloniex
         self.ticker = self.poloniex_service.returnTickerForPairs(self.pairs)
@@ -99,9 +102,10 @@ class Trader:
                     predicted_sell_profit = self.get_delta(two=bought_for, one=predicted_price, pair=pair,
                                                            op_type='SELL')
 
-                    # If profit more than threshold and 0 --> we must sell currency now
+                    # If predicted profit more than threshold and 0 --> we must place an order to sell currency
                     if predicted_sell_profit > 0 and predicted_sell_profit > self.THRESHOLD:
-                        plan_for_step.append(Operation('SELL', pair, predicted_sell_profit, step, predicted_price))
+                        plan_for_step.append(
+                            Operation('SELL', pair, predicted_sell_profit, step, predicted_price, 'postOnly'))
 
                     # If profit more than threshold and 0 --> we must sell currency now
                     if step == 1 and current_sell_profit > 0 and current_sell_profit > self.THRESHOLD:
@@ -153,14 +157,15 @@ class Trader:
                         self.poloniex_service.cancelOrder(order['orderNumber'])
 
             amount = round(self.budget / operation.price / self.top_n, 8)
-            total = amount * operation.price
+            total = round(amount * operation.price, 8)
             print('Amount =', amount, '; Total =', total)
 
-            if total >= 0.0001:
+            if total >= 0.00011:
                 performed_operation = self.poloniex_service.operate(operation=operation.op_type,
                                                                     currencyPair=operation.pair,
                                                                     rate=operation.price,
-                                                                    amount=amount)
+                                                                    amount=amount,
+                                                                    orderType=operation.orderType)
                 performed_operations.append(performed_operation)
                 print('Performed operation:', performed_operation)
 
