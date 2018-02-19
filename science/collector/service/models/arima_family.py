@@ -8,29 +8,38 @@ from statsmodels.tsa.statespace.sarimax import SARIMAX
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
 
-def makePrediction(data: dict, futureSteps: int, hyperparameters=None) -> dict:
+def makePrediction(data: dict, futureSteps: int, hyperparameters=None, algorithm='ARIMA') -> dict:
     """
     Make a prediction for incoming data on futureSteps
+    :param algorithm: provided algorithm for calculation of prediction
     :param data: dictionary of data where key = currencyPair and value = list of observations
     :param futureSteps: amount of steps on that algorithm will try to predict price
     :param hyperparameters: dictionary of hyperparameters for prediction model
     :return: dictionary of data where key = currencyPair and
         value = dict of predictions (equal size to futureSteps variable) where key=step_number value = prediction
     """
+
+    # Create pool and specify amount of simultaneous processes
     pool_size = multiprocessing.cpu_count() - 1
     pool = multiprocessing.Pool(
         processes=pool_size,
         maxtasksperchild=2,
     )
 
+    # if hyperparameters are not specified -> do it default params
     if hyperparameters is None:
-        hyperparameters = {'SARIMA': {'P': 1, 'D': 0, 'Q': 2, 's': 12}}
+        if algorithm == 'ARIMA':
+            hyperparameters = {'SARIMA': {'P': 1, 'D': 0, 'Q': 2, 's': 12}}
+        elif algorithm == 'SARIMA':
+            hyperparameters = {'SARIMA': {'P': 1, 'D': 0, 'Q': 2}}
 
+    # create list of inputs for the function that will be run in parallel
     inputs = [
-        (pair, chartData, futureSteps, hyperparameters)
+        (pair, chartData, futureSteps, hyperparameters, algorithm)
         for pair, chartData in data.items()
     ]
 
+    # pass all the inputs into functions and get predictions from them
     predictions = pool.map(makePredictionForPair, inputs)
 
     pool.close()  # no more tasks
@@ -40,20 +49,28 @@ def makePrediction(data: dict, futureSteps: int, hyperparameters=None) -> dict:
 
 
 def makePredictionForPair(parameters: tuple) -> dict:
-    pair, chartData, futureSteps, hyperparameters = parameters
+    pair, chartData, futureSteps, hyperparameters, algorithm = parameters
 
     print(datetime.now(), 'Started prediction for pair:', pair)
 
-    P, D, Q, s = hyperparameters['SARIMA']['P'], hyperparameters['SARIMA']['D'], \
-                 hyperparameters['SARIMA']['Q'], hyperparameters['SARIMA']['s']
+    if algorithm == 'ARIMA':
+        P, D, Q = hyperparameters['ARIMA']['P'], hyperparameters['ARIMA']['D'], \
+                  hyperparameters['ARIMA']['Q']
+    elif algorithm == 'SARIMA':
+        P, D, Q, s = hyperparameters['SARIMA']['P'], hyperparameters['SARIMA']['D'], \
+                     hyperparameters['SARIMA']['Q'], hyperparameters['SARIMA']['s']
 
     prediction = {}
 
     chartData = modifyChartData(chartData)
 
     for step in range(futureSteps):
-        model = SARIMAX(chartData, seasonal_order=(P, D, Q, s), enforce_stationarity=False,
-                        enforce_invertibility=False)
+        if algorithm == 'ARIMA':
+            model = SARIMAX(chartData, order=(P, D, Q), enforce_stationarity=False,
+                            enforce_invertibility=False)
+        elif algorithm == 'SARIMA':
+            model = SARIMAX(chartData, seasonal_order=(P, D, Q, s), enforce_stationarity=False,
+                            enforce_invertibility=False)
         model_fit = model.fit(disp=0, maxiter=1500, method='nm')
 
         output = model_fit.forecast()
