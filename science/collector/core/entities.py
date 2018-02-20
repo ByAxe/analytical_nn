@@ -96,3 +96,9 @@ class Operation:
     def __str__(self):
         return "Operation{operation_type = %s, pair = %s, delta = %s, step = %s, price = %s, amount=%s, orderType=%s}" \
                % (self.op_type, self.pair, self.delta, self.step, self.price, self.amount, self.orderType)
+
+    def __eq__(self, other):
+        """Overrides the default implementation"""
+        if isinstance(self, other.__class__):
+            return self.__dict__ == other.__dict__
+        return False

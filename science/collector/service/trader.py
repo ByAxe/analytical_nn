@@ -1,5 +1,3 @@
-import collections
-
 from science.collector.core.entities import Operation
 from science.collector.core.utils import ALL, TOTAL_MINIMUM
 from science.collector.service.poloniex_service import PoloniexPublicService
@@ -259,46 +257,38 @@ class Trader:
         :param plan:
         :return:
         """
-        pairs = [o.pair for o in plan]
+        plan_d = plan
+        unique_operations = []
 
-        # find duplicates in plan
-        duplicated_pairs = [item for item, count in collections.Counter(pairs).items() if count > 1]
-
-        duplicated_operations = dict.fromkeys(duplicated_pairs)
-
-        # Go though all operations to find duplicates and then collect them into dictionary
-        #  with lower/higher price planned for particular pair, based on type of operation (buy/sell)
+        # juxtapose each operations with each and find all duplicated operations for pairs
         for operation in plan:
-            if operation.pair in duplicated_pairs:
-                planned_operation: dict = duplicated_operations[operation.pair]
+            for operation_d in plan_d:
+                # if this is the same operation
+                if operation == operation_d:
+                    continue
 
-                planned_operation['amount'] = planned_operation.get('amount', 0) + operation.amount
+                # in our case it means that we must collapse them into one operation
+                if operation_d.pair == operation.pair:
+                    # increase the amount
+                    operation.amount += operation_d.amount
 
-                # if we buy -> pick a lowest possible price we've predicted
-                if operation.op_type == 'BUY':
-                    planned_operation['rate'] = operation.price \
-                        if operation.price < planned_operation.get('rate', 0) \
-                        else planned_operation.get('rate', 0)
+                    # choose optimal price among predictions
+                    if (operation.op_type == 'BUY' and operation_d.price < operation.price) or (
+                            operation.op_type == 'SELL' and operation_d.price > operation.price):
+                        operation.price = operation_d.price
 
-                # if we sell -> pick a higher possible price we've predicted
-                elif operation.op_type == 'SELL':
-                    planned_operation['price'] = operation.price \
-                        if operation.price > planned_operation.get('price', 0) \
-                        else planned_operation.get('price', 0)
+            # check if this pair already present in unique operations
+            # because with our logic we will collapse all operations with the same pair,
+            # once we met it in outer loop
+            is_present = False
+            for unique_op in unique_operations:
+                is_present = unique_op.pair == operation
 
-                duplicated_operations[operation.pair] = planned_operation
+            # insert this operations with accumulated amount and best price among all similar
+            if not is_present:
+                unique_operations.append(operation)
 
-        plan_without_duplicates = []
-
-        for operation in plan:
-            if operation.pair not in duplicated_pairs:
-                plan_without_duplicates.append(operation)
-            else:
-                operation.price = duplicated_operations[operation.pair]['price']
-                operation.amount = duplicated_operations[operation.pair]['amount']
-
-
-        return plan
+        return unique_operations
 
     def filterPlanByRestrictions(self, plan) -> list:
         """
@@ -312,14 +302,16 @@ class Trader:
         for operation in plan:
             amount = self.calculateAmountForOperation(operation)
 
-            # if we have less amount of currency than can possibly operate with - reduce it to affordable maximum
             secondary_currency = operation.pair.split("_")[1]
             secondary_balance = float(self.balances[secondary_currency])
-            amount = secondary_balance if amount > secondary_balance else amount
+
+            # if we have less amount of currency than can possibly operate with - reduce it to affordable maximum
+            if amount > secondary_balance:
+                amount = secondary_balance
 
             total = round(amount * operation.price, 8)
 
-            # if total is less than TOTAL_MINIMUM -> operation won't be approved by api
+            # if total is less than TOTAL_MINIMUM ==> operation won't be approved by Poloniex API
             if total >= TOTAL_MINIMUM:
                 operation.amount = amount
                 filtered_plan.append(operation)
