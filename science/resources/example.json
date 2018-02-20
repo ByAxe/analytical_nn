@@ -1,5 +1,5 @@
 {
-  "budget": 0.00030000,
+  "budget": 0.00022000,
   "pairs": [
     "ETH_LSK",
     "ETH_BCH",
@@ -18,10 +18,11 @@
   "steps": 1,
   "common_currency": "ETH",
   "THRESHOLD": 0.00000050,
-  "current_price_from": "last",
+  "current_price_buy_from": "lowerAsk",
+  "current_price_sell_from": "highestBid",
   "learn_on": "weightedAverage",
-  "reopen": false,
-  "top_n": 3,
+  "reopen": true,
+  "top_n": 2,
   "algorithm": "SARIMA",
   "hyperparameters": {
     "SARIMA": {

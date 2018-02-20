@@ -1,5 +1,7 @@
+import collections
+
 from science.collector.core.entities import Operation
-from science.collector.core.utils import ALL
+from science.collector.core.utils import ALL, TOTAL_MINIMUM
 from science.collector.service.poloniex_service import PoloniexPublicService
 
 
@@ -9,11 +11,13 @@ class Trader:
     ticker, balances, tradeHistory, orders, current_price, takerFee, makerFee, = {}, {}, {}, {}, '', 0.0, 0.0
 
     def __init__(self, poloniex_service, budget, steps, pairs, predictions, risk=0, top_n=3,
-                 common_currency='BTC', THRESHOLD=0.000001, current_price_from='last', reopen=False):
+                 common_currency='BTC', THRESHOLD=0.000001, current_price_buy_from='last',
+                 current_price_sell_from='last', reopen=False):
         """
         :param predictions: from model that makes predictions
         :param reopen: whether we must reopen all previously opened orders with new iteration if the currency coincide
-        :param current_price_from: the field from ticker to rely on while calculating profitability between current price and predicted one
+        :param current_price_buy_from: the field from ticker to rely on while calculating profitability between current price and predicted one when buying
+        :param current_price_sell_from: the field from ticker to rely on while calculating profitability between current price and predicted one when selling
         :param THRESHOLD: the baseline of profitability to perform any operation
         :param common_currency: what is the common currency
         :param top_n: how many of most profitable operations to apply
@@ -33,7 +37,8 @@ class Trader:
         self.top_n = top_n
         self.common_currency = common_currency
         self.THRESHOLD = THRESHOLD
-        self.current_price_from = current_price_from
+        self.current_price_buy_from = current_price_buy_from
+        self.current_price_sell_from = current_price_sell_from
 
         for p in predictions:
             for k, v in p.items():
@@ -73,15 +78,17 @@ class Trader:
                 main_currency, secondary_currency = pair.split('_')
 
                 predicted_price = prediction_list[step]
-                current_price = self.ticker[pair][self.current_price_from]
+
+                current_price_buy = float(self.ticker[pair][self.current_price_buy_from])
+                current_price_sell = float(self.ticker[pair][self.current_price_sell_from])
 
                 # get delta between current
-                buy_profit = self.get_delta(two=current_price, one=predicted_price, pair=pair, op_type='BUY')
+                buy_profit = self.get_delta(two=current_price_buy, one=predicted_price, pair=pair, op_type='BUY')
 
                 # If profit more than threshold and 0 --> we must buy currency now
                 # Example: current = 2, predicted = 4, profit = 2, so we must buy it now for 2, to sell later for 4
                 if buy_profit > 0 and buy_profit > self.THRESHOLD:
-                    plan_for_step.append(Operation('BUY', pair, buy_profit, step, predicted_price))
+                    plan_for_step.append(Operation('BUY', pair, buy_profit, step, current_price_buy))
                     continue
 
                 # Find an average price for this currency was bought
@@ -95,7 +102,7 @@ class Trader:
                     bought_for = self.calculate_avg_price(tradeHistoryForPair, secondary_balance)
 
                     # calculate profit of selling it NOW relying on price we have bought it for previously
-                    current_sell_profit = self.get_delta(two=bought_for, one=current_price, pair=pair,
+                    current_sell_profit = self.get_delta(two=bought_for, one=current_price_sell, pair=pair,
                                                          op_type='SELL')
 
                     # calculate profit of selling it LATER relying on price we have bought it for previously
@@ -105,20 +112,22 @@ class Trader:
                     # If predicted profit more than threshold and 0 --> we must place an order to sell currency
                     if predicted_sell_profit > 0 and predicted_sell_profit > self.THRESHOLD:
                         plan_for_step.append(
-                            Operation('SELL', pair, predicted_sell_profit, step, predicted_price, 'postOnly'))
+                            Operation('SELL', pair, predicted_sell_profit, step, predicted_price, orderType=False))
 
                     # If profit more than threshold and 0 --> we must sell currency now
                     if step == 1 and current_sell_profit > 0 and current_sell_profit > self.THRESHOLD:
-                        plan_for_step.append(Operation('SELL', pair, current_sell_profit, step, current_price))
+                        plan_for_step.append(Operation('SELL', pair, current_sell_profit, step, current_price_sell))
 
             common_plan[step] = plan_for_step
 
         for step, plan in common_plan.items():
+            filtered_plan = self.filterPlanByRestrictions(plan)
+
             # sort by delta (profitability metrics)
-            plan.sort(key=lambda op: op.delta, reverse=True)
+            filtered_plan.sort(key=lambda op: op.delta, reverse=True)
 
             # leave only top_n operations
-            common_plan[step] = plan[:self.top_n]
+            common_plan[step] = filtered_plan[:self.top_n]
 
         resulting_plan = []
 
@@ -149,25 +158,22 @@ class Trader:
         """
         performed_operations = []
 
-        for operation in plan:
+        plan_without_duplicates = self.removeDuplicates(plan)
+
+        for operation in plan_without_duplicates:
             # if there is an open orders for the currencies we have planned to buy or sell -> cancel previously opened order
             if self.reopen:
                 for order in self.orders[operation.pair] or []:
                     if order['type'].upper() == operation.op_type:
                         self.poloniex_service.cancelOrder(order['orderNumber'])
 
-            amount = round(self.budget / operation.price / self.top_n, 8)
-            total = round(amount * operation.price, 8)
-            print('Amount =', amount, '; Total =', total)
-
-            if total >= 0.00011:
-                performed_operation = self.poloniex_service.operate(operation=operation.op_type,
-                                                                    currencyPair=operation.pair,
-                                                                    rate=operation.price,
-                                                                    amount=amount,
-                                                                    orderType=operation.orderType)
-                performed_operations.append(performed_operation)
-                print('Performed operation:', performed_operation)
+            performed_operation = self.poloniex_service.operate(operation=operation.op_type,
+                                                                currencyPair=operation.pair,
+                                                                rate=operation.price,
+                                                                amount=operation.amount,
+                                                                orderType=operation.orderType)
+            performed_operations.append(performed_operation)
+            print('Performed operation:', performed_operation)
 
         return performed_operations
 
@@ -194,33 +200,33 @@ class Trader:
         tradeHistory.sort(key=lambda k: k['globalTradeID'], reverse=True)
         _balance = balance
         for record in tradeHistory:
-            _type, amount, operation_total, fee = record['type'], float(record['amount']), float(record['total']), \
-                                                  float(record['fee'])
+            _type, amount, operation_total, fee, rate = record['type'], float(record['amount']), float(record['total']), \
+                                                        float(record['fee']), float(record['rate'])
 
             # if it is not buy operation -> we do not interested in it
             # because we need to find out for what price we have bought the amount of this currency, that we have now
             if _type != 'buy':
                 continue
 
-            # Fee doesn't included in 'total' so we must add fee and then divide by amount to get fair rate
-            rate = (operation_total + fee) / amount
+            # Fee doesn't included in 'total'
+            rate += rate * fee / 100
 
             # If current operation does not explain why do we have so many coins on balance...
-            if _balance > operation_total:
+            if _balance > amount:
                 # add this amount with this rate into our dictionary
-                remainders_dict[rate] = operation_total
+                remainders_dict[rate] = amount
 
                 # and subtract it from balance
-                _balance -= operation_total
+                _balance -= amount
 
             # or - if total of current operation >= than balance, just return current rate as average price for left coins
             else:
                 return rate
 
-            # Calculate average price for remainders
-            average_price = sum(remainders_dict.keys()) / float(len(remainders_dict))
+        # Calculate average price for remainders
+        average_price = sum(remainders_dict.keys()) / float(len(remainders_dict))
 
-            return average_price
+        return average_price
 
     def minus_fee(self, delta, op_type):
         """
@@ -242,3 +248,70 @@ class Trader:
         # convert to common currency
         current_delta = self.to_common_currency(_current_delta, pair)
         return current_delta
+
+    def removeDuplicates(self, plan: list) -> list:
+        pairs = [o.pair for o in plan]
+
+        # find duplicates in plan
+        duplicated_pairs = [item for item, count in collections.Counter(pairs).items() if count > 1]
+
+        duplicated_operations = dict.fromkeys(duplicated_pairs)
+
+        # Go though all operations to find duplicates and then collect them into dictionary
+        #  with lower/higher price planned for particular pair, based on type of operation (buy/sell)
+        for operation in plan:
+            if operation.pair in duplicated_pairs:
+                planned_operation: dict = duplicated_operations[operation.pair]
+
+                planned_operation['amount'] = planned_operation.get('amount', 0) + operation.amount
+
+                if operation.op_type == 'BUY':
+                    planned_operation['rate'] = operation.price \
+                        if operation.price < planned_operation.get('rate', 0) \
+                        else planned_operation.get('rate', 0)
+                elif operation.op_type == 'SELL':
+                    planned_operation['price'] = operation.price \
+                        if operation.price > planned_operation.get('price', 0) \
+                        else planned_operation.get('price', 0)
+
+                duplicated_operations[operation.pair] = planned_operation
+
+        for operation in plan:
+            operation.price = duplicated_operations[operation.pair]['price']
+            operation.amount = duplicated_operations[operation.pair]['amount']
+
+        return plan
+
+    def filterPlanByRestrictions(self, plan) -> list:
+        """
+        TODO insert docs
+        :param plan:
+        :return:
+        """
+        filtered_plan = []
+
+        # filter the operations by restrictions of poloniex api
+        for operation in plan:
+            amount = self.calculateAmountForOperation(operation)
+
+            # if we have less amount of currency than can possibly operate with - reduce it to affordable maximum
+            secondary_currency = operation.pair.split("_")[1]
+            secondary_balance = float(self.balances[secondary_currency])
+            amount = secondary_balance if amount > secondary_balance else amount
+
+            total = round(amount * operation.price, 8)
+
+            # if total is less than TOTAL_MINIMUM -> operation won't be approved by api
+            if total >= TOTAL_MINIMUM:
+                operation.amount = amount
+                filtered_plan.append(operation)
+
+        return filtered_plan
+
+    def calculateAmountForOperation(self, operation):
+        """
+        TODO insert docs
+        :param operation:
+        :return:
+        """
+        return round(self.budget / operation.price / self.top_n, 8)

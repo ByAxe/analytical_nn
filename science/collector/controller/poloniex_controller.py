@@ -1,10 +1,9 @@
 # from flask_restful import Resource, Api
 import json
 import logging
-import time
-from datetime import datetime
 
-import schedule
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.triggers.cron import CronTrigger
 from flask import Flask, request
 
 from science.collector.core.utils import json_response, CYCLE_PARAMETERS
@@ -122,7 +121,7 @@ def saveChartDataToCSV():
     return json_response()
 
 
-@app.route('/private/cycle', methods=['POST'])
+@app.route('/private/iteration', methods=['POST'])
 def startCycleIteration():
     """
     Fires the cycle iteration of trading on poloniex with given parameters
@@ -139,17 +138,17 @@ def startCycleIteration():
 
 
 def job():
-    print(datetime.now(), "I'm working...")
     cycle.startCycleIteration(params_dict=CYCLE_PARAMETERS)
 
 
-@app.route('/private/fire/cycle', methods=['GET'])
+@app.route('/private/cycle', methods=['POST'])
 def fireCycle():
-    schedule.every(5).minutes.do(job)
+    scheduler = BackgroundScheduler()
 
-    while True:
-        schedule.run_pending()
-        time.sleep(.001)
+    scheduler.add_job(job, CronTrigger.from_crontab('25/5 * * * *'))
+    scheduler.start()
+
+    return json_response()
 
 
 @app.errorhandler(404)

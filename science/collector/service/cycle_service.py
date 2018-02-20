@@ -36,13 +36,17 @@ class Cycle:
         trader = Trader(poloniex_service=self.poloniex_service, budget=params.budget, risk=params.risk,
                         steps=params.steps, pairs=params.pairs, predictions=predictions,
                         top_n=params.top_n, common_currency=params.common_currency, THRESHOLD=params.THRESHOLD,
-                        current_price_from=params.current_price_from, reopen=params.reopen)
+                        current_price_buy_from=params.current_price_buy_from,
+                        current_price_sell_from=params.current_price_sell_from, reopen=params.reopen)
 
         print(datetime.now(), 'Started plan preparation...')
         plan = trader.preparePlan()
         print(datetime.now(), 'Planned operations:', [p.__str__() for p in plan])
 
         # perform created plan
+        if not plan:
+            return ["Nothing was performed because of empty plan!"]
+
         operations = trader.trade(plan)
         print(datetime.now(), 'Performed operations:', [op.__str__() for op in operations])
 

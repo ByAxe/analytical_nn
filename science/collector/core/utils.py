@@ -27,8 +27,10 @@ SECRET = "af6163ddd2cd1b55e771c45c981a46c9bb77de553c75e6862af41b00cb3f5c5f1fced0
 ALL = 'all'
 PAUSE_BETWEEN_QUERIES_SECONDS = .200
 
+TOTAL_MINIMUM = 0.00011
+
 CYCLE_PARAMETERS = {
-    "budget": 0.00022000,
+    "budget": 0.00033,
     "pairs": [
         "ETH_LSK",
         "ETH_BCH",
@@ -37,9 +39,12 @@ CYCLE_PARAMETERS = {
         "ETH_GNT",
         "ETH_ZRX",
         "ETH_STEEM",
-        "ETH_ZEC"
+        "ETH_ZEC",
+        "ETH_CVC",
+        "ETH_GNO",
+        "ETH_OMG"
     ],
-    "risk": 70,
+    "risk": 100,
     "window": {
         "MONTH": 1
     },
@@ -47,11 +52,12 @@ CYCLE_PARAMETERS = {
     "steps": 3,
     "common_currency": "ETH",
     "THRESHOLD": 0.00000050,
-    "current_price_from": "last",
+    "current_price_buy_from": "lowestAsk",
+    "current_price_sell_from": "highestBid",
     "learn_on": "weightedAverage",
-    "reopen": False,
-    "top_n": 2,
-    "algorithm": "SARIMA",
+    "reopen": True,
+    "top_n": 3,
+    "algorithm": "ARIMA",
     "hyperparameters": {
         "SARIMA": {
             "P": 1,

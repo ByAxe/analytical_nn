@@ -151,8 +151,8 @@ class PoloniexPublicService:
 
         # load the data from poloniex API
         currencyPair = mainCurrency + '_' + secondaryCurrency
-        chartData = self.self.poloniexApi.returnChartData(currencyPair=currencyPair, start=start, end=end,
-                                                          period=period)
+        chartData = self.poloniexApi.returnChartData(currencyPair=currencyPair, start=start, end=end,
+                                                     period=period)
 
         if not chartData or len(chartData) < 2:
             return len([])

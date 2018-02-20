@@ -1,3 +1,6 @@
+from science.collector.core.utils import TOTAL_MINIMUM
+
+
 class Parameters:
     params: dict
     budget: float
@@ -9,7 +12,8 @@ class Parameters:
     top_n: int
     common_currency: str
     THRESHOLD: float
-    current_price_from: str
+    current_price_buy_from: str
+    current_price_sell_from: str
     learn_on: str
     reopen: bool
     hyperparameters: dict
@@ -32,7 +36,8 @@ class Parameters:
         - top_n: how many of most profitable operations to apply
         - common_currency: what is the common currency for accounting profitability
         - THRESHOLD: the baseline of profitability to perform any operation
-        - current_price_from: the field from ticker to rely on while calculating profitability between current price and predicted one
+        - current_price_buy_from: the field from ticker to rely on while calculating profitability between current price and predicted one when buying
+        - current_price_sell_from: the field from ticker to rely on while calculating profitability between current price and predicted one when selling
         - learn_on: the column from chartData from poloniex on that to learn on our prediction algorithm
         - reopen: whether we should reopen all still opened orders on sells or buys?
         - hyperparameters: dictionary of hyperparameters for prediction model
@@ -51,7 +56,8 @@ class Parameters:
         self.top_n = params['top_n']
         self.common_currency = params['common_currency']
         self.THRESHOLD = params['THRESHOLD']
-        self.current_price_from = params['current_price_from']
+        self.current_price_buy_from = params['current_price_buy_from']
+        self.current_price_sell_from = params['current_price_sell_from']
         self.learn_on = params['learn_on']
         self.reopen = params['reopen']
         self.hyperparameters = params['hyperparameters']
@@ -68,8 +74,9 @@ class Operation:
     step: int
     price: float
     orderType: str
+    amount: float
 
-    def __init__(self, op_type, pair, profit, step, price, orderType='immediateOrCancel'):
+    def __init__(self, op_type, pair, profit, step, price, amount=TOTAL_MINIMUM, orderType='immediateOrCancel'):
         """
         DTO for operation
         :param price: what is predicted price
@@ -84,7 +91,8 @@ class Operation:
         self.step = step
         self.price = price
         self.orderType = orderType
+        self.amount = amount
 
     def __str__(self):
-        return "Operation{operation_type = %s, pair = %s, delta = %s, step = %s, price = %s, orderType=%s}" \
-               % (self.op_type, self.pair, self.delta, self.step, self.price, self.orderType)
+        return "Operation{operation_type = %s, pair = %s, delta = %s, step = %s, price = %s, amount=%s, orderType=%s}" \
+               % (self.op_type, self.pair, self.delta, self.step, self.price, self.amount, self.orderType)
