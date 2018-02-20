@@ -88,7 +88,8 @@ class Trader:
                 # If profit more than threshold and 0 --> we must buy currency now
                 # Example: current = 2, predicted = 4, profit = 2, so we must buy it now for 2, to sell later for 4
                 if buy_profit > 0 and buy_profit > self.THRESHOLD:
-                    plan_for_step.append(Operation('BUY', pair, buy_profit, step, current_price_buy))
+                    plan_for_step.append(Operation(op_type='BUY', pair=pair, profit=buy_profit,
+                                                   step=step, price=current_price_buy))
                     continue
 
                 # Find an average price for this currency was bought
@@ -111,15 +112,17 @@ class Trader:
 
                     # If predicted profit more than threshold and 0 --> we must place an order to sell currency
                     if predicted_sell_profit > 0 and predicted_sell_profit > self.THRESHOLD:
-                        plan_for_step.append(
-                            Operation('SELL', pair, predicted_sell_profit, step, predicted_price, orderType=False))
+                        plan_for_step.append(Operation(op_type='SELL', pair=pair, profit=predicted_sell_profit,
+                                                       step=step, price=predicted_price, orderType=False))
 
                     # If profit more than threshold and 0 --> we must sell currency now
                     if step == 1 and current_sell_profit > 0 and current_sell_profit > self.THRESHOLD:
-                        plan_for_step.append(Operation('SELL', pair, current_sell_profit, step, current_price_sell))
+                        plan_for_step.append(Operation(op_type='SELL', pair=pair, profit=current_sell_profit, step=step,
+                                                       price=current_price_sell))
 
             common_plan[step] = plan_for_step
 
+        # Filter operations and remove all those are not appropriate for poloniex or not the most profitable
         for step, plan in common_plan.items():
             filtered_plan = self.filterPlanByRestrictions(plan)
 
@@ -149,7 +152,10 @@ class Trader:
         else:
             resulting_plan = common_plan[1]
 
-        return resulting_plan
+        # remove all duplicated operations
+        plan_without_duplicates = self.removeDuplicates(resulting_plan)
+
+        return plan_without_duplicates
 
     def trade(self, plan: list) -> list:
         """
@@ -158,9 +164,7 @@ class Trader:
         """
         performed_operations = []
 
-        plan_without_duplicates = self.removeDuplicates(plan)
-
-        for operation in plan_without_duplicates:
+        for operation in plan:
             # if there is an open orders for the currencies we have planned to buy or sell -> cancel previously opened order
             if self.reopen:
                 for order in self.orders[operation.pair] or []:
@@ -250,6 +254,11 @@ class Trader:
         return current_delta
 
     def removeDuplicates(self, plan: list) -> list:
+        """
+        TODO insert docs
+        :param plan:
+        :return:
+        """
         pairs = [o.pair for o in plan]
 
         # find duplicates in plan
@@ -265,10 +274,13 @@ class Trader:
 
                 planned_operation['amount'] = planned_operation.get('amount', 0) + operation.amount
 
+                # if we buy -> pick a lowest possible price we've predicted
                 if operation.op_type == 'BUY':
                     planned_operation['rate'] = operation.price \
                         if operation.price < planned_operation.get('rate', 0) \
                         else planned_operation.get('rate', 0)
+
+                # if we sell -> pick a higher possible price we've predicted
                 elif operation.op_type == 'SELL':
                     planned_operation['price'] = operation.price \
                         if operation.price > planned_operation.get('price', 0) \
@@ -276,9 +288,15 @@ class Trader:
 
                 duplicated_operations[operation.pair] = planned_operation
 
+        plan_without_duplicates = []
+
         for operation in plan:
-            operation.price = duplicated_operations[operation.pair]['price']
-            operation.amount = duplicated_operations[operation.pair]['amount']
+            if operation.pair not in duplicated_pairs:
+                plan_without_duplicates.append(operation)
+            else:
+                operation.price = duplicated_operations[operation.pair]['price']
+                operation.amount = duplicated_operations[operation.pair]['amount']
+
 
         return plan
 
