@@ -1,6 +1,7 @@
 import multiprocessing
 import warnings
 from datetime import datetime
+from multiprocessing import set_start_method, freeze_support
 
 import numpy as np
 from statsmodels.tsa.statespace.sarimax import SARIMAX
@@ -18,6 +19,10 @@ def makePrediction(data: dict, futureSteps: int, hyperparameters=None, algorithm
     :return: dictionary of data where key = currencyPair and
         value = dict of predictions (equal size to futureSteps variable) where key=step_number value = prediction
     """
+
+    # Monkey patch to make multiprocessing work on Mac OS
+    freeze_support()
+    set_start_method('spawn')
 
     # Create pool and specify amount of simultaneous processes
     pool_size = multiprocessing.cpu_count()

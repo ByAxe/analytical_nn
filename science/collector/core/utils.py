@@ -49,7 +49,7 @@ CYCLE_PARAMETERS = {
         "MONTH": 1
     },
     "period": 300,
-    "steps": 3,
+    "steps": 12,
     "common_currency": "ETH",
     "THRESHOLD": 0.00000050,
     "current_price_buy_from": "lowestAsk",

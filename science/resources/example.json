@@ -1,5 +1,5 @@
 {
-  "budget": 0.00022000,
+  "budget": 0.00033,
   "pairs": [
     "ETH_LSK",
     "ETH_BCH",
@@ -8,22 +8,25 @@
     "ETH_GNT",
     "ETH_ZRX",
     "ETH_STEEM",
-    "ETH_ZEC"
+    "ETH_ZEC",
+    "ETH_CVC",
+    "ETH_GNO",
+    "ETH_OMG"
   ],
-  "risk": 70,
+  "risk": 100,
   "window": {
     "MONTH": 1
   },
   "period": 300,
-  "steps": 1,
+  "steps": 3,
   "common_currency": "ETH",
   "THRESHOLD": 0.00000050,
-  "current_price_buy_from": "lowerAsk",
+  "current_price_buy_from": "lowestAsk",
   "current_price_sell_from": "highestBid",
   "learn_on": "weightedAverage",
   "reopen": true,
-  "top_n": 2,
-  "algorithm": "SARIMA",
+  "top_n": 3,
+  "algorithm": "ARIMA",
   "hyperparameters": {
     "SARIMA": {
       "P": 1,
