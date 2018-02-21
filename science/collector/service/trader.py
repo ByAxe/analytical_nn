@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from science.collector.core.entities import Operation
 from science.collector.core.utils import ALL, TOTAL_MINIMUM
 from science.collector.service.poloniex_service import PoloniexPublicService
@@ -153,7 +155,10 @@ class Trader:
         # remove all duplicated operations
         plan_without_duplicates = self.removeDuplicates(resulting_plan)
 
-        return plan_without_duplicates
+        # one more time - filter by restrictions of the api
+        filtered_plan_without_duplicates = self.filterPlanByRestrictions(plan_without_duplicates)
+
+        return filtered_plan_without_duplicates
 
     def trade(self, plan: list) -> list:
         """
@@ -257,6 +262,7 @@ class Trader:
         :param plan:
         :return:
         """
+        print(datetime.now(), '\nBEFORE removeDuplicates:', [p.__str__() for p in plan])
         plan_d = plan
         unique_operations = []
 
@@ -282,12 +288,13 @@ class Trader:
             # once we met it in outer loop
             is_present = False
             for unique_op in unique_operations:
-                is_present = unique_op.pair == operation
+                is_present = unique_op.pair == operation.pair
 
             # insert this operations with accumulated amount and best price among all similar
             if not is_present:
                 unique_operations.append(operation)
 
+        print(datetime.now(), '\nAFTER removeDuplicates:', [p.__str__() for p in unique_operations])
         return unique_operations
 
     def filterPlanByRestrictions(self, plan) -> list:

@@ -1,9 +1,9 @@
 # from flask_restful import Resource, Api
 import json
 import logging
+from multiprocessing import set_start_method, freeze_support
 
 from apscheduler.schedulers.background import BackgroundScheduler
-from apscheduler.triggers.cron import CronTrigger
 from flask import Flask, request
 
 from science.collector.core.utils import json_response, CYCLE_PARAMETERS
@@ -24,6 +24,10 @@ def before_request():
     global poloniexPublicService, cycle
     poloniexPublicService = PoloniexPublicService()
     cycle = Cycle(poloniexPublicService)
+
+    # Monkey patch to make multiprocessing work on Mac OS
+    freeze_support()
+    set_start_method('spawn')
 
 
 @app.route('/public/currencies', methods=['PUT'])
@@ -144,9 +148,16 @@ def job():
 @app.route('/private/cycle', methods=['POST'])
 def fireCycle():
     scheduler = BackgroundScheduler()
+    startWith = str(request.args['startWith']) if 'startWith' in request.args else '*'
+    minute = startWith + '/5'
 
-    scheduler.add_job(job, CronTrigger.from_crontab('25/5 * * * *'))
+    scheduler.add_job(job, 'cron', year='*', month='*', day='*', week='*',
+                      day_of_week='*', hour='*', minute=minute, second=0)
+
+    # scheduler.add_job(job, CronTrigger.from_crontab(startWith + '/5 * * * *'))
     scheduler.start()
+
+    print('Will start in: ' + startWith)
 
     return json_response()
 

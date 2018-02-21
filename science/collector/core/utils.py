@@ -38,32 +38,29 @@ CYCLE_PARAMETERS = {
         "ETH_REP",
         "ETH_GNT",
         "ETH_ZRX",
-        "ETH_STEEM",
         "ETH_ZEC",
         "ETH_CVC",
-        "ETH_GNO",
-        "ETH_OMG"
     ],
     "risk": 100,
     "window": {
         "MONTH": 1
     },
     "period": 300,
-    "steps": 12,
+    "steps": 6,
     "common_currency": "ETH",
     "THRESHOLD": 0.00000050,
     "current_price_buy_from": "lowestAsk",
     "current_price_sell_from": "highestBid",
     "learn_on": "weightedAverage",
-    "reopen": True,
+    "reopen": False,
     "top_n": 3,
-    "algorithm": "ARIMA",
+    "algorithm": "SARIMA",
     "hyperparameters": {
         "SARIMA": {
             "P": 1,
             "D": 0,
             "Q": 2,
-            "s": 12
+            "s": 6
         },
         "ARIMA": {
             "P": 1,
