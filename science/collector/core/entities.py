@@ -1,6 +1,3 @@
-from science.collector.core.utils import TOTAL_MINIMUM
-
-
 class Parameters:
     params: dict
     budget: float
@@ -76,7 +73,7 @@ class Operation:
     orderType: str
     amount: float
 
-    def __init__(self, op_type, pair, profit, step, price, amount=TOTAL_MINIMUM, orderType='immediateOrCancel'):
+    def __init__(self, op_type, pair, profit, step, price, amount=None, orderType='immediateOrCancel'):
         """
         DTO for operation
         :param price: what is predicted price

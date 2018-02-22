@@ -307,7 +307,11 @@ class Trader:
 
         # filter the operations by restrictions of poloniex api
         for operation in plan:
-            amount = self.calculateAmountForOperation(operation)
+            amount = operation.amount
+
+            # if it is not filled yet -> calculate amount for operation
+            if not amount:
+                amount = self.calculateAmountForOperation(operation)
 
             secondary_currency = operation.pair.split("_")[1]
             secondary_balance = float(self.balances[secondary_currency])
