@@ -1,8 +1,6 @@
 import multiprocessing
-import warnings
-from datetime import datetime
-
 import numpy as np
+import warnings
 from statsmodels.tsa.statespace.sarimax import SARIMAX
 
 warnings.simplefilter(action='ignore', category=FutureWarning)
@@ -50,8 +48,6 @@ def makePrediction(data: dict, futureSteps: int, hyperparameters=None, algorithm
 def makePredictionForPair(parameters: tuple) -> dict:
     pair, chartData, futureSteps, hyperparameters, algorithm = parameters
 
-    print(datetime.now(), 'Started prediction for pair:', pair)
-
     P, D, Q = hyperparameters[algorithm]['P'], hyperparameters[algorithm]['D'], \
               hyperparameters[algorithm]['Q']
 
@@ -69,7 +65,7 @@ def makePredictionForPair(parameters: tuple) -> dict:
         elif algorithm == 'SARIMA':
             model = SARIMAX(chartData, seasonal_order=(P, D, Q, s), enforce_stationarity=False,
                             enforce_invertibility=False)
-        model_fit = model.fit(disp=0, maxiter=1500, method='nm')
+        model_fit = model.fit(disp=0, maxiter=2500, method='nm')
 
         output = model_fit.forecast()
         predicted_value = output[0]
@@ -77,7 +73,6 @@ def makePredictionForPair(parameters: tuple) -> dict:
 
         chartData.append(np.array([predicted_value]))
 
-    print(datetime.now(), 'Finished prediction for pair:', pair)
     return {pair: prediction}
 
 

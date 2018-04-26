@@ -39,13 +39,12 @@ class Cycle:
                         current_price_buy_from=params.current_price_buy_from,
                         current_price_sell_from=params.current_price_sell_from, reopen=params.reopen)
 
-        print(datetime.now(), 'Started plan preparation...')
         plan = trader.preparePlan()
-        print(datetime.now(), 'Planned operations:', [p.__str__() for p in plan])
 
         # perform created plan
         if not plan:
-            return ["Nothing was performed because of empty plan!"]
+            print("Nothing was performed because of empty plan!")
+            return []
 
         operations = trader.trade(plan)
         print(datetime.now(), 'Performed operations:', [op.__str__() for op in operations])

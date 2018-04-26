@@ -27,26 +27,24 @@ SECRET = "af6163ddd2cd1b55e771c45c981a46c9bb77de553c75e6862af41b00cb3f5c5f1fced0
 ALL = 'all'
 PAUSE_BETWEEN_QUERIES_SECONDS = .200
 
-TOTAL_MINIMUM = 0.00011
-
 CYCLE_PARAMETERS = {
     "budget": 0.00033,
     "pairs": [
-        "ETH_LSK",
         "ETH_BCH",
+        "ETH_LSK",
         "ETH_ETC",
-        "ETH_REP",
-        "ETH_GNT",
+        "ETH_OMG",
         "ETH_ZRX",
         "ETH_ZEC",
-        "ETH_CVC",
+        "ETH_GNT",
+        "ETH_REP",
     ],
-    "risk": 100,
+    "risk": 0,
     "window": {
         "MONTH": 1
     },
     "period": 300,
-    "steps": 6,
+    "steps": 2,
     "common_currency": "ETH",
     "THRESHOLD": 0.00000050,
     "current_price_buy_from": "lowestAsk",
@@ -60,7 +58,7 @@ CYCLE_PARAMETERS = {
             "P": 1,
             "D": 0,
             "Q": 2,
-            "s": 6
+            "s": 12
         },
         "ARIMA": {
             "P": 1,
@@ -69,6 +67,7 @@ CYCLE_PARAMETERS = {
         }
     }
 }
+TOTAL_MINIMUM = 0.00011
 
 
 def search_book(books, book_id):

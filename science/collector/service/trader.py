@@ -1,5 +1,3 @@
-from datetime import datetime
-
 from science.collector.core.entities import Operation
 from science.collector.core.utils import ALL, TOTAL_MINIMUM
 from science.collector.service.poloniex_service import PoloniexPublicService
@@ -180,7 +178,6 @@ class Trader:
                                                                 amount=operation.amount,
                                                                 orderType=operation.orderType)
             performed_operations.append(performed_operation)
-            print('Performed operation:', performed_operation)
 
         return performed_operations
 
@@ -262,7 +259,6 @@ class Trader:
         :param plan:
         :return:
         """
-        print(datetime.now(), '\nBEFORE removeDuplicates:', [p.__str__() for p in plan])
         plan_d = plan
         unique_operations = []
 
@@ -294,7 +290,6 @@ class Trader:
             if not is_present:
                 unique_operations.append(operation)
 
-        print(datetime.now(), '\nAFTER removeDuplicates:', [p.__str__() for p in unique_operations])
         return unique_operations
 
     def filterPlanByRestrictions(self, plan) -> list:
